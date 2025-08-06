@@ -70,7 +70,7 @@ apis: [
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
 // Debug: Log the generated spec to see if paths are included
-console.log('Swagger spec paths:', Object.keys(swaggerSpec.paths || {}));
+console.log('Swagger spec paths:', Object.keys((swaggerSpec as any).paths || {}));
 
 // Serve the JSON specification separately
 app.get('/api-docs/swagger.json', (req, res) => {
