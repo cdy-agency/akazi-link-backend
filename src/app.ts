@@ -2,6 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import path from 'path';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 
@@ -58,7 +59,12 @@ definition: {
     bearerAuth: [],
   }],
 },
-apis: [__dirname + '/routes/*.ts', __dirname + '/models/*.ts'], // Path to the API docs
+apis: [
+  path.join(__dirname, 'routes', '*.ts'),
+  path.join(__dirname, 'routes', '*.js'),
+  path.join(__dirname, 'models', '*.ts'),
+  path.join(__dirname, 'models', '*.js')
+], // Path to the API docs
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
