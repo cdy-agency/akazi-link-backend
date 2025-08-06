@@ -4,7 +4,6 @@ import Company from '../models/Company';
 import Employee from '../models/Employee';
 import { comparePasswords, generateToken, hashPassword } from '../utils/authUtils';
 import { Types } from 'mongoose';
-import '../types/express';
 
 /**
 * @swagger

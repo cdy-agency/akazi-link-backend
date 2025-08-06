@@ -3,7 +3,6 @@ import Company from '../models/Company';
 import Job from '../models/Job';
 import Application from '../models/Application';
 import { Types } from 'mongoose';
-import '../types/express';
 
 /**
 * @swagger
