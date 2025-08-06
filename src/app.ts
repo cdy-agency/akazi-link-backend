@@ -58,10 +58,20 @@ definition: {
     bearerAuth: [],
   }],
 },
-apis: ['./src/routes/*.ts', './src/models/*.ts'], // Path to the API docs
+apis: [__dirname + '/routes/*.ts', __dirname + '/models/*.ts'], // Path to the API docs
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
+
+// Debug: Log the generated spec to see if paths are included
+console.log('Swagger spec paths:', Object.keys(swaggerSpec.paths || {}));
+
+// Serve the JSON specification separately
+app.get('/api-docs/swagger.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Routes

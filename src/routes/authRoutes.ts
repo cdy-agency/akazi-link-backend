@@ -189,8 +189,180 @@ const router = Router();
 *           description: The date and time the application was last updated
 */
 
+/**
+ * @swagger
+ * /api/auth/register/employee:
+ *   post:
+ *     summary: Register a new employee
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *               - dateOfBirth
+ *               - phoneNumber
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: John Doe
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: john.doe@example.com
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *                 example: password123
+ *               dateOfBirth:
+ *                 type: string
+ *                 format: date
+ *                 example: 1990-01-01
+ *               phoneNumber:
+ *                 type: string
+ *                 example: "+1234567890"
+ *     responses:
+ *       201:
+ *         description: Employee registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Employee registered successfully
+ *                 user:
+ *                   $ref: '#/components/schemas/Employee'
+ *                 token:
+ *                   type: string
+ *                   example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *       400:
+ *         description: Bad request - validation error
+ *       409:
+ *         description: User already exists
+ */
 router.post('/register/employee', registerEmployee);
+
+/**
+ * @swagger
+ * /api/auth/register/company:
+ *   post:
+ *     summary: Register a new company
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - companyName
+ *               - email
+ *               - password
+ *               - location
+ *               - phoneNumber
+ *             properties:
+ *               companyName:
+ *                 type: string
+ *                 example: Acme Corp
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: contact@acmecorp.com
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *                 example: password123
+ *               location:
+ *                 type: string
+ *                 example: New York, USA
+ *               phoneNumber:
+ *                 type: string
+ *                 example: "+1987654321"
+ *               website:
+ *                 type: string
+ *                 example: https://www.acmecorp.com
+ *               logo:
+ *                 type: string
+ *                 example: https://www.acmecorp.com/logo.png
+ *     responses:
+ *       201:
+ *         description: Company registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Company registered successfully. Awaiting admin approval.
+ *                 user:
+ *                   $ref: '#/components/schemas/Company'
+ *                 token:
+ *                   type: string
+ *                   example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *       400:
+ *         description: Bad request - validation error
+ *       409:
+ *         description: User already exists
+ */
 router.post('/register/company', registerCompany);
+
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Login user (employee, company, or superadmin)
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: user@example.com
+ *               password:
+ *                 type: string
+ *                 example: password123
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Login successful
+ *                 user:
+ *                   oneOf:
+ *                     - $ref: '#/components/schemas/Employee'
+ *                     - $ref: '#/components/schemas/Company'
+ *                     - $ref: '#/components/schemas/User'
+ *                 token:
+ *                   type: string
+ *                   example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *       400:
+ *         description: Bad request - missing credentials
+ *       401:
+ *         description: Invalid credentials
+ *       403:
+ *         description: Company not approved by admin
+ */
 router.post('/login', login);
 
 export default router;
