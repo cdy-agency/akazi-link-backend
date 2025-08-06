@@ -4,6 +4,7 @@ import Company from '../models/Company';
 import Employee from '../models/Employee';
 import { comparePasswords, generateToken, hashPassword } from '../utils/authUtils';
 import { Types } from 'mongoose';
+import '../types/express';
 
 /**
 * @swagger
@@ -76,7 +77,7 @@ try {
     return res.status(400).json({ message: 'Invalid credentials' });
   }
 
-  const token = generateToken({ id: adminUser._id, role: adminUser.role });
+  const token = generateToken({ id: (adminUser._id as any).toString(), role: adminUser.role });
   res.status(200).json({ message: 'Admin login successful', token, role: adminUser.role });
 } catch (error) {
   console.error('Error during admin login:', error);
