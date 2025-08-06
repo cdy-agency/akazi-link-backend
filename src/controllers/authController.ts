@@ -280,12 +280,12 @@ try {
   }
 
   let responsePayload: { id: string; role: string; isApproved?: boolean } = {
-    id: user._id.toString(),
+    id: (user._id as any).toString(),
     role: user.role,
   };
 
   if (user.role === 'company') {
-    const company = await Company.findById(user._id);
+    const company = await Company.findById(user._id as any);
     if (!company) {
       return res.status(400).json({ message: 'Company profile not found' });
     }

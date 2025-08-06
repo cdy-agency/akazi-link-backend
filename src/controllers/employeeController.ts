@@ -1,3 +1,4 @@
+/// <reference path="../types/express.d.ts" />
 import { Request, Response } from 'express';
 import Employee from '../models/Employee';
 import Job from '../models/Job';

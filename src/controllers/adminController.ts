@@ -1,3 +1,4 @@
+/// <reference path="../types/express.d.ts" />
 import { Request, Response } from 'express';
 import User from '../models/User';
 import Company from '../models/Company';
@@ -76,7 +77,7 @@ try {
     return res.status(400).json({ message: 'Invalid credentials' });
   }
 
-  const token = generateToken({ id: adminUser._id, role: adminUser.role });
+  const token = generateToken({ id: (adminUser._id as any).toString(), role: adminUser.role });
   res.status(200).json({ message: 'Admin login successful', token, role: adminUser.role });
 } catch (error) {
   console.error('Error during admin login:', error);

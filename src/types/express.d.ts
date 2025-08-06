@@ -1,9 +1,11 @@
-import { JwtPayload } from 'jsonwebtoken';
+/// <reference types="express" />
 
-declare global {
-namespace Express {
+declare namespace Express {
   interface Request {
-    user?: JwtPayload & { id: string; role: string; isApproved?: boolean };
+    user?: {
+      id: string;
+      role: string;
+      isApproved?: boolean;
+    };
   }
-}
 }
