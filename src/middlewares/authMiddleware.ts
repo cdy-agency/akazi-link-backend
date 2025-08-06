@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/authUtils';
-import User from '../models/User';
 import Company from '../models/Company';
 
 /**
