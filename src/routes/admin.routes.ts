@@ -5,7 +5,7 @@ updateAdminPassword,
 getEmployees,
 getCompanies,
 approveCompany,
-} from '../controllers/adminController';
+} from '../controllers/admin.controller';
 import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware';
 
 const router = Router();

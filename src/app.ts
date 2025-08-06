@@ -5,10 +5,10 @@ import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 
-import authRoutes from './routes/authRoutes';
-import employeeRoutes from './routes/employeeRoutes';
-import companyRoutes from './routes/companyRoutes';
-import adminRoutes from './routes/adminRoutes';
+import authRoutes from './routes/auth.routes';
+import employeeRoutes from './routes/employee.routes';
+import companyRoutes from './routes/company.routes';
+import adminRoutes from './routes/admin.routes';
 import { errorHandler } from './middlewares/errorHandler';
 import { seedSuperAdmin } from './utils/seed';
 

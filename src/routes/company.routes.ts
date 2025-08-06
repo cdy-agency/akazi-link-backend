@@ -5,7 +5,7 @@ postJob,
 getCompanyJobs,
 getApplicantsForJob,
 updateProfile,
-} from '../controllers/companyController';
+} from '../controllers/company.controller';
 import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware';
 
 const router = Router();

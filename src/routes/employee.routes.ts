@@ -6,7 +6,7 @@ getJobSuggestions,
 applyForJob,
 getApplications,
 getNotifications,
-} from '../controllers/employeeController';
+} from '../controllers/employee.controller';
 import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware';
 
 const router = Router();
