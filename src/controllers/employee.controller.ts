@@ -4,6 +4,7 @@ import Employee from '../models/Employee';
 import Job from '../models/Job';
 import Application from '../models/Application';
 import { Types } from 'mongoose';
+import WorkRequest from '../models/WorkRequest';
 
 /**
 * @swagger
@@ -57,6 +58,80 @@ try {
   console.error('Error getting employee profile:', error);
   res.status(500).json({ message: 'Server error' });
 }
+};
+
+/**
+ * @swagger
+ * /api/employee/profile:
+ *   patch:
+ *     summary: Update employee profile
+ *     tags: [Employee]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               dateOfBirth:
+ *                 type: string
+ *                 format: date
+ *               phoneNumber:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Employee profile updated successfully
+ *       400:
+ *         description: Bad request
+ *       403:
+ *         description: Access Denied
+ *       404:
+ *         description: Employee not found
+ *       500:
+ *         description: Server error
+ */
+export const updateEmployeeProfile = async (req: Request, res: Response) => {
+  try {
+    const employeeId = req.user?.id;
+    if (!employeeId) {
+      return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
+    }
+
+    const updates: any = { ...req.body };
+    delete updates.role;
+    delete updates.password;
+    delete updates.email;
+
+    // Normalize some fields
+    if (updates.jobPreferences && !Array.isArray(updates.jobPreferences)) {
+      updates.jobPreferences = [updates.jobPreferences];
+    }
+    if (updates.skills && !Array.isArray(updates.skills)) {
+      updates.skills = [updates.skills];
+    }
+    if (updates.documents && !Array.isArray(updates.documents)) {
+      updates.documents = [updates.documents];
+    }
+
+    const employee = await Employee.findByIdAndUpdate(
+      employeeId,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    res.status(200).json({ message: 'Employee profile updated successfully', employee });
+  } catch (error) {
+    console.error('Error updating employee profile:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 };
 
 /**
@@ -145,15 +220,24 @@ try {
 *         description: Server error
 */
 export const getJobSuggestions = async (req: Request, res: Response) => {
-// For simplicity, this endpoint currently behaves like getJobsByCategory.
-// In a real application, this would involve more complex logic like
-// user's past applications, profile skills, viewed jobs, etc.
 try {
+  const employeeId = req.user?.id;
   const { category } = req.query;
   const query: any = {};
 
   if (category && typeof category === 'string') {
     query.category = category;
+  }
+
+  // If employee is logged in, use their jobPreferences to suggest jobs
+  if (employeeId) {
+    const employee = await Employee.findById(employeeId);
+    if (employee && employee.jobPreferences && employee.jobPreferences.length > 0) {
+      query.$or = [
+        { category: { $in: employee.jobPreferences } },
+        { title: { $in: employee.jobPreferences.map((p: string) => new RegExp(p, 'i')) } },
+      ];
+    }
   }
 
   const jobs = await Job.find(query).populate('companyId', 'companyName logo');
@@ -381,4 +465,39 @@ try {
   console.error('Error getting notifications:', error);
   res.status(500).json({ message: 'Server error' });
 }
+};
+
+/**
+ * Employee views and responds to work requests
+ */
+export const listWorkRequests = async (req: Request, res: Response) => {
+  try {
+    const employeeId = req.user?.id;
+    if (!employeeId) return res.status(403).json({ message: 'Access Denied' });
+    const requests = await WorkRequest.find({ employeeId }).populate('companyId', 'companyName logo');
+    res.status(200).json({ message: 'Work requests retrieved', requests });
+  } catch (error) {
+    console.error('Error listing work requests:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const respondWorkRequest = async (req: Request, res: Response) => {
+  try {
+    const employeeId = req.user?.id;
+    const { id } = req.params as { id: string };
+    const { action } = req.body as { action: 'accept' | 'reject' };
+    if (!employeeId) return res.status(403).json({ message: 'Access Denied' });
+    if (!Types.ObjectId.isValid(id)) return res.status(400).json({ message: 'Invalid request id' });
+    const wr = await WorkRequest.findById(id);
+    if (!wr) return res.status(404).json({ message: 'Work request not found' });
+    if (wr.employeeId.toString() !== employeeId) return res.status(403).json({ message: 'Access Denied' });
+    wr.status = action === 'accept' ? 'accepted' : 'rejected';
+    wr.notifications.push({ message: `Employee has ${wr.status} your request`, read: false, createdAt: new Date() } as any);
+    await wr.save();
+    res.status(200).json({ message: 'Response saved', request: wr });
+  } catch (error) {
+    console.error('Error responding to work request:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 };

@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import User from '../models/User';
 import { hashPassword } from './authUtils';
+import Company from '../models/Company';
 
 dotenv.config();
 
@@ -25,4 +26,37 @@ try {
 } catch (error) {
   console.error('Error seeding SuperAdmin user:', error);
 }
+};
+
+export const migrateCompanyStatus = async () => {
+  try {
+    console.log('Starting company status migration...');
+    
+    // Update companies without status field to have 'pending' status
+    const result = await Company.updateMany(
+      { status: { $exists: false } },
+      { 
+        $set: { 
+          status: 'pending',
+          isActive: true
+        }
+      }
+    );
+    
+    // Update companies without isApproved to have isApproved: false
+    await Company.updateMany(
+      { isApproved: { $exists: false } },
+      { $set: { isApproved: false } }
+    );
+    
+    // Update companies without isActive to have isActive: true
+    await Company.updateMany(
+      { isActive: { $exists: false } },
+      { $set: { isActive: true } }
+    );
+    
+    console.log(`Migration completed. Updated ${result.modifiedCount} companies.`);
+  } catch (error) {
+    console.error('Error during company status migration:', error);
+  }
 };

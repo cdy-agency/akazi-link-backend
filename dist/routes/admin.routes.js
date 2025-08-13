@@ -1,22 +1,14 @@
-import { Router } from 'express';
-import {
-adminLogin,
-updateAdminPassword,
-getEmployees,
-getCompanies,
-approveCompany,
-rejectCompany,
-disableCompany,
-enableCompany,
-deleteCompany,
-  listAllUsers,
-} from '../controllers/admin.controller';
-import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware';
-import uploadSingle from 'rod-fileupload';
-import cloudinary from '../config/cloudinary';
-
-const router = Router();
-
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const admin_controller_1 = require("../controllers/admin.controller");
+const authMiddleware_1 = require("../middlewares/authMiddleware");
+const rod_fileupload_1 = __importDefault(require("rod-fileupload"));
+const cloudinary_1 = __importDefault(require("../config/cloudinary"));
+const router = (0, express_1.Router)();
 /**
  * @swagger
  * /api/admin/login:
@@ -61,11 +53,9 @@ const router = Router();
  *       401:
  *         description: Invalid credentials
  */
-router.post('/login', adminLogin); // Admin login does not require prior authentication
-
-router.use(authenticateToken); // All subsequent admin routes require authentication
-router.use(authorizeRoles(['superadmin'])); // All subsequent admin routes require superadmin role
-
+router.post('/login', admin_controller_1.adminLogin); // Admin login does not require prior authentication
+router.use(authMiddleware_1.authenticateToken); // All subsequent admin routes require authentication
+router.use((0, authMiddleware_1.authorizeRoles)(['superadmin'])); // All subsequent admin routes require superadmin role
 /**
  * @swagger
  * /api/admin/update-password:
@@ -109,8 +99,7 @@ router.use(authorizeRoles(['superadmin'])); // All subsequent admin routes requi
  *       403:
  *         description: Forbidden - not a superadmin
  */
-router.patch('/update-password',uploadSingle('image', cloudinary), updateAdminPassword);
-
+router.patch('/update-password', (0, rod_fileupload_1.default)('image', cloudinary_1.default), admin_controller_1.updateAdminPassword);
 /**
  * @swagger
  * /api/admin/employees:
@@ -133,8 +122,7 @@ router.patch('/update-password',uploadSingle('image', cloudinary), updateAdminPa
  *       403:
  *         description: Forbidden - not a superadmin
  */
-router.get('/employees', getEmployees);
-
+router.get('/employees', admin_controller_1.getEmployees);
 /**
  * @swagger
  * /api/admin/companies:
@@ -157,8 +145,7 @@ router.get('/employees', getEmployees);
  *       403:
  *         description: Forbidden - not a superadmin
  */
-router.get('/companies', getCompanies);
-
+router.get('/companies', admin_controller_1.getCompanies);
 /**
  * @swagger
  * /api/admin/company/{id}/approve:
@@ -210,8 +197,7 @@ router.get('/companies', getCompanies);
  *       404:
  *         description: Company not found
  */
-router.patch('/company/:id/approve', approveCompany);
-
+router.patch('/company/:id/approve', admin_controller_1.approveCompany);
 /**
  * @swagger
  * /api/admin/company/{id}/reject:
@@ -263,8 +249,7 @@ router.patch('/company/:id/approve', approveCompany);
  *       404:
  *         description: Company not found
  */
-router.patch('/company/:id/reject', rejectCompany);
-
+router.patch('/company/:id/reject', admin_controller_1.rejectCompany);
 /**
  * @swagger
  * /api/admin/company/{id}/disable:
@@ -303,8 +288,7 @@ router.patch('/company/:id/reject', rejectCompany);
  *       404:
  *         description: Company not found
  */
-router.patch('/company/:id/disable', disableCompany);
-
+router.patch('/company/:id/disable', admin_controller_1.disableCompany);
 /**
  * @swagger
  * /api/admin/company/{id}/enable:
@@ -343,8 +327,7 @@ router.patch('/company/:id/disable', disableCompany);
  *       404:
  *         description: Company not found
  */
-router.patch('/company/:id/enable', enableCompany);
-
+router.patch('/company/:id/enable', admin_controller_1.enableCompany);
 /**
  * @swagger
  * /api/admin/company/{id}/delete:
@@ -381,9 +364,7 @@ router.patch('/company/:id/enable', enableCompany);
  *       404:
  *         description: Company not found
  */
-router.delete('/company/:id/delete', deleteCompany);
-
+router.delete('/company/:id/delete', admin_controller_1.deleteCompany);
 // List all users - admin only
-router.get('/users-all', listAllUsers);
-
-export default router;
+router.get('/users-all', admin_controller_1.listAllUsers);
+exports.default = router;

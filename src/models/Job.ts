@@ -3,17 +3,18 @@ import { IJob } from '../types/models';
 
 const JobSchema: Schema = new Schema(
 {
-  title: { type: String, required: true },
-  description: { type: String, required: true },
+  title: { type: String},
+  description: { type: String},
+  image:{type: String},
   skills: { type: [String], default: [] },
   experience: { type: String },
   employmentType: {
     type: String,
     enum: ['fulltime', 'part-time', 'internship'],
-    required: true,
   },
   salary: { type: String },
-  category: { type: String, required: true },
+  category: { type: String},
+  benefits: { type: [String], default: [] },
   companyId: { type: Types.ObjectId, ref: 'Company', required: true },
 },
 { timestamps: true }

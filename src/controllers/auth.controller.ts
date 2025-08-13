@@ -74,7 +74,7 @@ import User from '../models/User';
 */
 export const registerEmployee = async (req: Request, res: Response) => {
 try {
-  const { name, email, password, dateOfBirth, phoneNumber } = req.body;
+  const { name, email, password, dateOfBirth, phoneNumber, jobPreferences } = req.body;
 
   if (!name || !email || !password) {
     return res.status(400).json({ message: 'Please provide name, email, and password' });
@@ -94,6 +94,7 @@ try {
     role: 'employee',
     dateOfBirth,
     phoneNumber,
+    jobPreferences: Array.isArray(jobPreferences) ? jobPreferences : [],
   });
 
   res.status(201).json({ message: 'Employee registered successfully', employee: employee.toJSON() });
@@ -192,10 +193,12 @@ try {
     location,
     phoneNumber,
     website,
-    logo,
-    isApproved: false, // Companies need admin approval
+    logo: logo.url,
+    isApproved: false, 
+    status: 'pending',
+    isActive: true,
   });
-
+  
   res.status(201).json({ message: 'Company registered successfully. Awaiting admin approval.', company: company.toJSON() });
 } catch (error) {
   console.error('Error registering company:', error);
@@ -303,7 +306,31 @@ try {
     ...(user.role === 'company' && { isApproved: responsePayload.isApproved }),
   });
 } catch (error) {
-  console.error('Error during login:', error);
-  res.status(500).json({ message: 'Server error during login' });
+  res.status(500).json({ message: 'Server error during login' , error});
 }
+};
+
+/**
+ * Allow a logged-in company (even if not approved) to submit missing profile info
+ * Expects: about (string), documents (string[] or string)
+ */
+export const companyCompleteProfile = async (req: Request, res: Response) => {
+  try {
+    const { id, role } = (req as any).user || {};
+    if (!id || role !== 'company') {
+      return res.status(403).json({ message: 'Access Denied' });
+    }
+
+    const { about, documents } = req.body as { about?: string; documents?: string[] | string };
+    const updates: any = {};
+    if (typeof about === 'string') updates.about = about;
+    if (documents) updates.documents = Array.isArray(documents) ? documents : [documents];
+
+    const company = await Company.findByIdAndUpdate(id, { $set: updates }, { new: true }).select('-password');
+    if (!company) return res.status(404).json({ message: 'Company not found' });
+
+    res.status(200).json({ message: 'Details submitted', company });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
 };

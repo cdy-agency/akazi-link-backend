@@ -1,11 +1,14 @@
-import { Router } from 'express';
-import { registerEmployee, registerCompany, login, companyCompleteProfile } from '../controllers/auth.controller';
-import { authenticateToken } from '../middlewares/authMiddleware';
-import uploadSingle from 'rod-fileupload';
-import cloudinary from '../config/cloudinary';
-
-const router = Router();
-
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_controller_1 = require("../controllers/auth.controller");
+const authMiddleware_1 = require("../middlewares/authMiddleware");
+const rod_fileupload_1 = __importDefault(require("rod-fileupload"));
+const cloudinary_1 = __importDefault(require("../config/cloudinary"));
+const router = (0, express_1.Router)();
 /**
 * @swagger
 * components:
@@ -191,7 +194,6 @@ const router = Router();
 *           format: date-time
 *           description: The date and time the application was last updated
 */
-
 /**
  * @swagger
  * /api/auth/register/employee:
@@ -250,8 +252,7 @@ const router = Router();
  *       409:
  *         description: User already exists
  */
-router.post('/register/employee', registerEmployee);
-
+router.post('/register/employee', auth_controller_1.registerEmployee);
 /**
  * @swagger
  * /api/auth/register/company:
@@ -315,8 +316,7 @@ router.post('/register/employee', registerEmployee);
  *       409:
  *         description: User already exists
  */
-router.post('/register/company',uploadSingle('logo', cloudinary), registerCompany);
-
+router.post('/register/company', (0, rod_fileupload_1.default)('logo', cloudinary_1.default), auth_controller_1.registerCompany);
 /**
  * @swagger
  * /api/auth/login:
@@ -366,9 +366,7 @@ router.post('/register/company',uploadSingle('logo', cloudinary), registerCompan
  *       403:
  *         description: Company not approved by admin
  */
-router.post('/login', login);
-
+router.post('/login', auth_controller_1.login);
 // Company can submit missing info even before approval
-router.patch('/company/complete', authenticateToken, companyCompleteProfile);
-
-export default router;
+router.patch('/company/complete', authMiddleware_1.authenticateToken, auth_controller_1.companyCompleteProfile);
+exports.default = router;

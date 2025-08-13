@@ -1,12 +1,19 @@
-import mongoose, { Schema } from 'mongoose';
+import { Schema } from 'mongoose';
 import { IEmployee } from '../types/models';
-import User from './User'; // Import the base User model
+import User from './User';
 
 const EmployeeSchema: Schema = new Schema(
 {
   name: { type: String, required: true },
   dateOfBirth: { type: Date },
   phoneNumber: { type: String },
+  jobPreferences: { type: [String], default: [] },
+  about: { type: String },
+  experience: { type: String },
+  education: { type: String },
+  profileImage: { type: String },
+  skills: { type: [String], default: [] },
+  documents: { type: [String], default: [] },
 },
 { timestamps: true }
 );

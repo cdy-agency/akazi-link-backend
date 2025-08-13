@@ -1,22 +1,11 @@
-import { Router } from 'express';
-import {
-getProfile,
-getJobsByCategory,
-getJobSuggestions,
-applyForJob,
-getApplications,
-getNotifications,
-  updateEmployeeProfile,
-  listWorkRequests,
-  respondWorkRequest,
-} from '../controllers/employee.controller';
-import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware';
-
-const router = Router();
-
-router.use(authenticateToken); // All employee routes require authentication
-router.use(authorizeRoles(['employee'])); // All employee routes require employee role
-
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const employee_controller_1 = require("../controllers/employee.controller");
+const authMiddleware_1 = require("../middlewares/authMiddleware");
+const router = (0, express_1.Router)();
+router.use(authMiddleware_1.authenticateToken); // All employee routes require authentication
+router.use((0, authMiddleware_1.authorizeRoles)(['employee'])); // All employee routes require employee role
 /**
  * @swagger
  * /api/employee/profile:
@@ -37,9 +26,8 @@ router.use(authorizeRoles(['employee'])); // All employee routes require employe
  *       403:
  *         description: Forbidden - not an employee
  */
-router.get('/profile', getProfile);
-router.patch('/profile', updateEmployeeProfile);
-
+router.get('/profile', employee_controller_1.getProfile);
+router.patch('/profile', employee_controller_1.updateEmployeeProfile);
 /**
  * @swagger
  * /api/employee/jobs:
@@ -69,8 +57,7 @@ router.patch('/profile', updateEmployeeProfile);
  *       403:
  *         description: Forbidden - not an employee
  */
-router.get('/jobs', getJobsByCategory);
-
+router.get('/jobs', employee_controller_1.getJobsByCategory);
 /**
  * @swagger
  * /api/employee/suggestions:
@@ -93,8 +80,7 @@ router.get('/jobs', getJobsByCategory);
  *       403:
  *         description: Forbidden - not an employee
  */
-router.get('/suggestions', getJobSuggestions);
-
+router.get('/suggestions', employee_controller_1.getJobSuggestions);
 /**
  * @swagger
  * /api/employee/apply/{jobId}:
@@ -156,8 +142,7 @@ router.get('/suggestions', getJobSuggestions);
  *       404:
  *         description: Job not found
  */
-router.post('/apply/:jobId', applyForJob);
-
+router.post('/apply/:jobId', employee_controller_1.applyForJob);
 /**
  * @swagger
  * /api/employee/applications:
@@ -180,8 +165,7 @@ router.post('/apply/:jobId', applyForJob);
  *       403:
  *         description: Forbidden - not an employee
  */
-router.get('/applications', getApplications);
-
+router.get('/applications', employee_controller_1.getApplications);
 /**
  * @swagger
  * /api/employee/notifications:
@@ -214,10 +198,8 @@ router.get('/applications', getApplications);
  *       403:
  *         description: Forbidden - not an employee
  */
-router.get('/notifications', getNotifications);
-
+router.get('/notifications', employee_controller_1.getNotifications);
 // Work requests
-router.get('/work-requests', listWorkRequests);
-router.patch('/work-requests/:id/respond', respondWorkRequest);
-
-export default router;
+router.get('/work-requests', employee_controller_1.listWorkRequests);
+router.patch('/work-requests/:id/respond', employee_controller_1.respondWorkRequest);
+exports.default = router;

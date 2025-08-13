@@ -43,8 +43,10 @@ return async (req: Request, res: Response, next: NextFunction) => {
   // Special check for company approval
   if (role === 'company') {
     const company = await Company.findById(id);
-    if (!company || !company.isApproved) {
-      return res.status(403).json({ message: 'Access Denied: Company not approved by admin' });
+    if (!company || !company.isApproved || company.status === 'rejected' || company.status === 'disabled' || company.status === 'deleted' || !company.isActive) {
+      return res.status(403).json({ 
+        message: 'Access Denied: Company account is not active or has been rejected/disabled/deleted' 
+      });
     }
   }
 

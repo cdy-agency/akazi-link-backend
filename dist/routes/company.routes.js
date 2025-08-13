@@ -1,22 +1,16 @@
-import { Router } from 'express';
-import {
-getProfile,
-postJob,
-getCompanyJobs,
-getApplicantsForJob,
-updateProfile,
-completeCompanyProfile,
-updateApplicationStatus,
-} from '../controllers/company.controller';
-import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware';
-import uploadSingle from "rod-fileupload"
-import cloudinary from '../config/cloudinary';
-
-const router = Router();
-
-router.use(authenticateToken); // All company routes require authentication
-router.use(authorizeRoles(['company'])); // All company routes require company role and approval
-
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const company_controller_1 = require("../controllers/company.controller");
+const authMiddleware_1 = require("../middlewares/authMiddleware");
+const rod_fileupload_1 = __importDefault(require("rod-fileupload"));
+const cloudinary_1 = __importDefault(require("../config/cloudinary"));
+const router = (0, express_1.Router)();
+router.use(authMiddleware_1.authenticateToken); // All company routes require authentication
+router.use((0, authMiddleware_1.authorizeRoles)(['company'])); // All company routes require company role and approval
 /**
  * @swagger
  * /api/company/profile:
@@ -37,8 +31,7 @@ router.use(authorizeRoles(['company'])); // All company routes require company r
  *       403:
  *         description: Forbidden - not a company or not approved
  */
-router.get('/profile', getProfile);
-
+router.get('/profile', company_controller_1.getProfile);
 /**
  * @swagger
  * /api/company/profile:
@@ -89,10 +82,9 @@ router.get('/profile', getProfile);
  *       403:
  *         description: Forbidden - not a company or not approved
  */
-router.patch('/profile', updateProfile);
+router.patch('/profile', company_controller_1.updateProfile);
 // Company completes missing information (about, documents)
-router.patch('/complete-profile', completeCompanyProfile);
-
+router.patch('/complete-profile', company_controller_1.completeCompanyProfile);
 /**
  * @swagger
  * /api/company/job:
@@ -160,8 +152,7 @@ router.patch('/complete-profile', completeCompanyProfile);
  *       403:
  *         description: Forbidden - not a company or not approved
  */
-router.post('/job',uploadSingle('image', cloudinary), postJob);
-
+router.post('/job', (0, rod_fileupload_1.default)('image', cloudinary_1.default), company_controller_1.postJob);
 /**
  * @swagger
  * /api/company/jobs:
@@ -184,8 +175,7 @@ router.post('/job',uploadSingle('image', cloudinary), postJob);
  *       403:
  *         description: Forbidden - not a company or not approved
  */
-router.get('/jobs', getCompanyJobs);
-
+router.get('/jobs', company_controller_1.getCompanyJobs);
 /**
  * @swagger
  * /api/company/applicants/{jobId}:
@@ -218,14 +208,11 @@ router.get('/jobs', getCompanyJobs);
  *       404:
  *         description: Job not found
  */
-router.get('/applicants/:jobId', getApplicantsForJob);
-
+router.get('/applicants/:jobId', company_controller_1.getApplicantsForJob);
 // Update application status
-router.patch('/applications/:applicationId/status', updateApplicationStatus);
-
+router.patch('/applications/:applicationId/status', company_controller_1.updateApplicationStatus);
 // Browse employees and send work requests
-import { browseEmployees, sendWorkRequest } from '../controllers/company.controller';
-router.get('/employees', browseEmployees);
-router.post('/work-requests', sendWorkRequest);
-
-export default router;
+const company_controller_2 = require("../controllers/company.controller");
+router.get('/employees', company_controller_2.browseEmployees);
+router.post('/work-requests', company_controller_2.sendWorkRequest);
+exports.default = router;
