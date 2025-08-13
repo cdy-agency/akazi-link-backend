@@ -1,0 +1,353 @@
+Akazi-Link Backend (Job-Link Platform)
+
+Base URL
+- Development: http://localhost:5000
+- Swagger: http://localhost:5000/api-docs
+
+Auth
+- Scheme: Bearer token (JWT) in HTTP Authorization header
+- Header: Authorization: Bearer <token>
+- Token lifetime: 1 hour
+- Roles: employee, company, superadmin
+
+Environment
+- PORT, default 5000
+- MONGO_URI, default mongodb://localhost:27017/joblink
+- JWT_SECRET, default supersecretjwtkey
+- SUPERADMIN_EMAIL, default admin@joblink.com
+- SUPERADMIN_PASSWORD, default admin123
+
+---
+
+Data Models (Current, as implemented)
+
+User (base, MongoDB Collection: users)
+- _id: string (ObjectId)
+- email: string (unique, required)
+- password: string (hashed, required)
+- role: 'employee' | 'company' | 'superadmin' (required)
+- createdAt: date
+- updatedAt: date
+
+Employee (discriminator of User, Collection: users)
+- Inherits User fields
+- name: string (required)
+- dateOfBirth: date (optional)
+- phoneNumber: string (optional)
+
+Company (discriminator of User, Collection: users)
+- Inherits User fields
+- companyName: string (required)
+- location: string (optional)
+- phoneNumber: string (optional)
+- website: string (optional)
+- logo: string (optional URL)
+- isApproved: boolean (default false)  // gating access to company routes
+
+Job (Collection: jobs)
+- _id: string (ObjectId)
+- title: string (required)
+- description: string (required)
+- skills: string[] (optional)
+- experience: string (optional)
+- employmentType: 'fulltime' | 'part-time' | 'internship' (required)
+- salary: string (optional)
+- category: string (required)
+- companyId: string (ObjectId -> Company, required)
+- createdAt: date
+- updatedAt: date
+
+Application (Collection: applications)
+- _id: string (ObjectId)
+- jobId: string (ObjectId -> Job, required)
+- employeeId: string (ObjectId -> Employee, required)
+- skills: string[] (optional)
+- experience: string (optional)
+- appliedVia: 'normal' | 'whatsapp' | 'referral' (default 'normal')
+- status: 'pending' | 'reviewed' | 'interview' | 'hired' | 'rejected' (default 'pending')
+- notifications: Notification[] (embedded, default [])
+- createdAt: date
+- updatedAt: date
+
+Notification (embedded in Application)
+- message: string (required)
+- read: boolean (default false)
+- createdAt: date (default now)
+
+---
+
+API Reference (Current, as implemented)
+
+Auth Routes (no auth required)
+- POST /api/auth/register/employee
+  Body JSON: { name: string, email: string, password: string, dateOfBirth?: string(YYYY-MM-DD), phoneNumber?: string }
+  201 → { message, employee }
+  400 → { message }
+
+- POST /api/auth/register/company
+  Body JSON: { companyName: string, email: string, password: string, location?: string, phoneNumber?: string, website?: string, logo?: string }
+  201 → { message: 'Company registered successfully. Awaiting admin approval.', company }
+  400/500 → { message }
+  Notes: isApproved defaults to false; company login allowed but company routes are blocked until approval.
+
+- POST /api/auth/login
+  Body JSON: { email: string, password: string }
+  200 → { message, token, role, isApproved? }  // isApproved only when role=company
+  400/500 → { message }
+
+Employee Routes (require role=employee)
+- GET /api/employee/profile
+  200 → { message, employee }
+
+- GET /api/employee/jobs?category=string
+  200 → { message, jobs[] }  // jobs populated with companyName and logo
+
+- GET /api/employee/suggestions?category=string
+  200 → { message, jobs[] }  // currently same as jobs by category
+
+- POST /api/employee/apply/:jobId
+  Body JSON: { skills?: string[], experience?: string, appliedVia?: 'normal'|'whatsapp'|'referral' }
+  201 → { message, application }
+  400/404 → { message }
+
+- GET /api/employee/applications
+  200 → { message, applications[] }  // populated job title and companyName/logo
+
+- GET /api/employee/notifications
+  200 → { message, notifications[] }  // aggregated from employee applications
+
+Company Routes (require role=company AND isApproved=true)
+- GET /api/company/profile
+  200 → { message, company }
+
+- PATCH /api/company/profile
+  Body JSON (any of): { companyName?, location?, phoneNumber?, website?, logo? }
+  200 → { message, company }
+
+- POST /api/company/job
+  Body JSON: { title: string, description: string, skills?: string[], experience?: string, employmentType: 'fulltime'|'part-time'|'internship', salary?: string, category: string }
+  201 → { message, job }
+
+- GET /api/company/jobs
+  200 → { message, jobs[] }
+
+- GET /api/company/applicants/:jobId
+  200 → { message, applicants[] }  // applicants populated with employee basic info
+
+Admin Routes (superadmin only)
+- POST /api/admin/login
+  200 → { message, token, role: 'superadmin' }
+
+- PATCH /api/admin/update-password
+  Body JSON: { currentPassword: string, newPassword: string }
+  200 → { message }
+
+- GET /api/admin/employees
+  200 → { message, employees[] }
+
+- GET /api/admin/companies
+  200 → { message, companies[] }
+
+- PATCH /api/admin/company/:id/approve
+  200 → { message, company }  // sets isApproved=true
+
+---
+
+Auth and Role Gating Logic (Important for frontend UX)
+- All authenticated routes require Authorization header with a valid JWT.
+- Company routes add an approval check; companies can log in and receive isApproved in the login response, but all /api/company/* endpoints are blocked until approval.
+- Frontend should:
+  - After company login, if isApproved=false, show a blocked dashboard state and direct to an onboarding flow (see “Gaps and Proposed Additions”).
+  - For employees and admin, role gate the UI based on role in login response.
+
+---
+
+Primary Frontend Flows Supported Today
+
+Employee
+1) Register → Login → Fetch profile
+2) Browse jobs by category and suggestions (currently identical filtering by category)
+3) Apply to a job (checks duplicate applications)
+4) View applications and notifications
+
+Company (after approval by admin)
+1) Login → Fetch/Update profile
+2) Post jobs
+3) View own jobs
+4) View applicants per job
+
+Super Admin
+1) Login
+2) Update password
+3) View employees and companies
+4) Approve companies
+
+Public (Unlogged)
+- Not implemented in backend. See “Gaps and Proposed Additions”.
+
+---
+
+Gaps vs Requested Features and Proposed Additions
+
+Employee side
+- Requested: Registration with multi-select job preferences; dashboard to update About, Experience, Education background, Profile image, Name/Email/Phone, Skills, CV/Documents; job suggestions based on preferences; Apply button works (already done).
+- Current gaps:
+  - No job preferences in model or registration.
+  - No employee profile update endpoint.
+  - No fields for about/experience/education/skills/profileImage/cv/documents.
+  - Suggestions endpoint does not use preferences.
+- Proposed model changes (Employee):
+  - jobPreferences: string[]  // store English keys e.g., ['cleaner','clerk','porter']
+  - about: string
+  - experience: string
+  - education: string
+  - skills: string[]
+  - profileImageUrl: string
+  - cvUrl: string  // single CV
+  - documents: { name: string, url: string, uploadedAt: date }[]  // optional
+- Proposed endpoints:
+  - PATCH /api/employee/profile
+    Body: any of the fields above; all optional
+    Auth: employee
+    Notes: server should restrict email/role changes unless explicitly allowed.
+  - GET /api/employee/suggestions
+    Change logic to use jobPreferences (AND/OR skills, category) to rank jobs.
+
+Company side
+- Requested: On first login show “Missing Information: provide About the Company and Upload Documents”. Allow submit for admin review. Company must wait for approval before accessing dashboard. Extend job posting with benefits (insurance, allowances, etc.). Manage applicants (accept/reject; hire/reject after interview) with notifications. Browse employees and send work requests; employees can accept/reject with notifications.
+- Current gaps:
+  - isApproved gating blocks all company routes; there is no onboarding endpoint available prior to approval.
+  - Company model lacks aboutCompany and documents fields.
+  - No endpoints to update application status, send notifications, browse employees, or send work requests.
+  - Job model lacks benefits fields.
+- Proposed model changes (Company):
+  - aboutCompany: string
+  - documents: { name: string, url: string, uploadedAt: date }[]
+- Proposed model changes (Job):
+  - benefits: { insurance?: string, allowances?: string, other?: string }  // or benefits: string[] if simpler
+- Proposed new/adjusted endpoints:
+  - PATCH /api/company/onboarding   // accessible to company role even if not approved
+    Body: { aboutCompany: string, documents: [{ name, url }] }
+    Auth: company (approval check bypass only for onboarding path)
+  - PATCH /api/company/profile      // remains as-is for approved companies
+  - PATCH /api/company/applications/:applicationId/status
+    Body: { status: 'reviewed'|'interview'|'hired'|'rejected', message?: string }
+    Effect: update Application.status and push a Notification entry
+  - GET /api/company/employees?search=...&skills=...&jobPreferences=...
+    Return employee profiles (restricted fields) for browsing
+  - POST /api/company/work-requests
+    Body: { employeeId: string, jobId?: string, message: string }
+    Effect: create a work request and notify employee; employees can accept/reject
+  - PATCH /api/employee/work-requests/:requestId
+    Body: { action: 'accept'|'reject' }
+    Effect: update request and send notifications to both parties
+  - POST /api/company/job (existing): extend body to include benefits
+
+Super Admin side
+- Requested: Register employee (give credentials). No CRUD beyond described.
+- Current gaps: No endpoint for admin-created employee.
+- Proposed endpoint:
+  - POST /api/admin/employees
+    Body: { name, email, password, phoneNumber?, dateOfBirth?, jobPreferences?, skills? }
+    Effect: create an Employee user; return credentials; email sending optional.
+
+Public (Unlogged) user
+- Requested: View job listings and details without applying.
+- Current gaps: All list jobs endpoints are under employee.
+- Proposed endpoints:
+  - GET /api/public/jobs?category=...&search=...&company=...
+    Return: { jobs[] } // public fields only
+  - GET /api/public/jobs/:id
+    Return: { job }
+
+Navbar/Sidebar behavior guidance
+- If token is present, decode it to read role. For company, also use login.response.isApproved to gate. When isApproved=false, show onboarding prompt and restrict dashboard actions.
+- Show user identity: For employee use employee.name and/or email; for company use company.companyName and/or email; for admin use email.
+
+---
+
+Suggested Request/Response Examples (for frontend integration)
+
+1) Login
+Request
+POST /api/auth/login
+{ "email": "john.doe@example.com", "password": "password123" }
+
+Success Response (employee)
+{ "message": "Login successful", "token": "<jwt>", "role": "employee" }
+
+Success Response (company)
+{ "message": "Login successful", "token": "<jwt>", "role": "company", "isApproved": false }
+
+2) List jobs (employee)
+GET /api/employee/jobs?category=Cleaning
+Headers: Authorization: Bearer <jwt>
+
+Response
+{ "message": "Jobs retrieved successfully", "jobs": [ { "_id": "...", "title": "Office Cleaner", "category": "Cleaning", "employmentType": "fulltime", "companyId": { "_id": "...", "companyName": "Acme", "logo": "..." } } ] }
+
+3) Apply to job
+POST /api/employee/apply/6639c...a4
+Headers: Authorization: Bearer <jwt>
+Body
+{ "skills": ["Mopping","Dusting"], "experience": "2 years", "appliedVia": "normal" }
+
+Response
+{ "message": "Application submitted successfully", "application": { "_id": "...", "status": "pending", ... } }
+
+4) Company post job (approved only)
+POST /api/company/job
+Headers: Authorization: Bearer <jwt>
+Body
+{ "title": "Warehouse Clerk", "description": "...", "skills": ["Lifting"], "experience": "1+ years", "employmentType": "fulltime", "salary": "$300-400/mo", "category": "Logistics" }
+
+Response
+{ "message": "Job posted successfully", "job": { "_id": "...", "title": "Warehouse Clerk", ... } }
+
+---
+
+Error Handling (general)
+- 400 Bad Request: validation errors, invalid credentials, duplicate apply
+- 401 Unauthorized: missing token
+- 403 Forbidden: invalid token, insufficient role, company not approved
+- 404 Not Found: missing resources (employee, company, job)
+- 500 Server Error: unhandled exceptions
+Response body always includes { message: string }
+
+---
+
+Implementation Notes for Proposed Additions (backend impact)
+- Employee model/schema: add fields (jobPreferences, about, experience, education, skills, profileImageUrl, cvUrl, documents[]). Add PATCH /api/employee/profile.
+- Company onboarding: add aboutCompany and documents[] fields; either:
+  a) Introduce a dedicated onboarding route that bypasses approval check, or
+  b) Modify authorizeRoles middleware to allow PATCH /api/company/profile when not approved but restrict allowed fields to onboarding ones.
+- Job benefits: extend Job schema with benefits fields; update POST /api/company/job and swagger.
+- Applications lifecycle: add status update route(s) and write to notifications array with useful messages.
+- Public jobs: add read-only routes under /api/public/* without auth.
+- Admin create-employee: add POST /api/admin/employees route.
+- File uploads: no current file upload middleware; use URLs for now (uploaded to external storage), or add upload endpoints later.
+
+---
+
+Feature-to-Endpoint Mapping (after proposed changes)
+- Employee registration with job preferences: POST /api/auth/register/employee (+ jobPreferences) and PATCH /api/employee/profile
+- Employee dashboard profile update: PATCH /api/employee/profile
+- Employee job suggestions: GET /api/employee/suggestions (use jobPreferences and/or skills)
+- Apply to jobs: POST /api/employee/apply/:jobId (already present)
+- Company onboarding missing info: PATCH /api/company/onboarding (new) or allow PATCH /api/company/profile pre-approval (restricted)
+- Company approval: PATCH /api/admin/company/:id/approve (already present)
+- Extended job posting (benefits): POST /api/company/job (extend model/body)
+- View applicants: GET /api/company/applicants/:jobId (already present)
+- Accept/reject applicants, hire/reject: PATCH /api/company/applications/:applicationId/status (new)
+- Browse employees and send work requests: GET /api/company/employees, POST /api/company/work-requests, PATCH /api/employee/work-requests/:id (new)
+- Super admin: register employee: POST /api/admin/employees (new)
+- Public job listings: GET /api/public/jobs and GET /api/public/jobs/:id (new)
+
+---
+
+Quick Start (backend)
+- npm run dev  // runs src/app.ts with ts-node
+- npm run build && npm start  // compile then run dist/app.js
+- Visit Swagger at /api-docs for live docs of current endpoints
+
+This document summarizes the current backend contracts and the delta needed to satisfy all requested features so the frontend can design against what exists now and plan for upcoming changes. 
