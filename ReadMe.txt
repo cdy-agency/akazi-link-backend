@@ -148,6 +148,7 @@ Admin (requires role=superadmin)
   - DELETE /admin/company/:id/delete
 - Company profile review flow:
   - GET   /admin/companies/pending-review → lists companies where profileCompletionStatus='pending_review' and status='pending'
+  - GET   /admin/company/:id → fetch full company details (about, documents, contact info, etc.) for review UI
   - PATCH /admin/company/:id/approve-profile → sets isApproved=true, status=approved, profileCompletionStatus=complete, profileCompletedAt set
   - PATCH /admin/company/:id/reject-profile  → sets status=rejected, isActive=false, profileCompletionStatus=incomplete, requires rejectionReason
 

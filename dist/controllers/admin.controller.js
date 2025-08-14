@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.rejectCompanyProfile = exports.getAllEmployees = exports.approveCompanyProfile = exports.getCompaniesPendingReview = exports.getLoggedInAdmin = exports.listAllUsers = exports.deleteCompany = exports.enableCompany = exports.disableCompany = exports.rejectCompany = exports.approveCompany = exports.getCompanies = exports.getEmployees = exports.updateAdminPassword = exports.adminLogin = void 0;
+exports.rejectCompanyProfile = exports.getAllEmployees = exports.approveCompanyProfile = exports.getCompanyDetailsForReview = exports.getCompaniesPendingReview = exports.getLoggedInAdmin = exports.listAllUsers = exports.deleteCompany = exports.enableCompany = exports.disableCompany = exports.rejectCompany = exports.approveCompany = exports.getCompanies = exports.getEmployees = exports.updateAdminPassword = exports.adminLogin = void 0;
 const User_1 = __importDefault(require("../models/User"));
 const Company_1 = __importDefault(require("../models/Company"));
 const Employee_1 = __importDefault(require("../models/Employee"));
@@ -652,9 +652,9 @@ exports.getLoggedInAdmin = getLoggedInAdmin;
  */
 const getCompaniesPendingReview = async (req, res) => {
     try {
-        const companies = await Company_1.default.find({}).select('-password').sort({ createdAt: -1 });
+        const companies = await Company_1.default.find({ profileCompletionStatus: 'pending_review', status: { $in: ['pending'] } }).select('-password').sort({ createdAt: -1 });
         res.status(200).json({
-            message: 'All companies retrieved successfully',
+            message: 'Companies pending review retrieved successfully',
             companies
         });
     }
@@ -664,6 +664,67 @@ const getCompaniesPendingReview = async (req, res) => {
     }
 };
 exports.getCompaniesPendingReview = getCompaniesPendingReview;
+/**
+ * @swagger
+ * /api/admin/company/{id}:
+ *   get:
+ *     summary: Get full company details for review
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: mongo-id
+ *         description: ID of the company to review
+ *     responses:
+ *       200:
+ *         description: Company details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Company details retrieved successfully
+ *                 company:
+ *                   $ref: '#/components/schemas/Company'
+ *       400:
+ *         description: Invalid Company ID
+ *       403:
+ *         description: Access Denied
+ *       404:
+ *         description: Company not found
+ *       500:
+ *         description: Server error
+ */
+const getCompanyDetailsForReview = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!mongoose_1.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid Company ID' });
+        }
+        const company = await Company_1.default.findById(id).select('-password');
+        if (!company) {
+            return res.status(404).json({ message: 'Company not found' });
+        }
+        // Optionally ensure it's in pending_review stage
+        // If you want to strictly restrict to pending review, uncomment below:
+        // if (company.profileCompletionStatus !== 'pending_review') {
+        //   return res.status(400).json({ message: 'Company is not in pending review state' });
+        // }
+        res.status(200).json({ message: 'Company details retrieved successfully', company });
+    }
+    catch (error) {
+        console.error('Error retrieving company details for review:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+exports.getCompanyDetailsForReview = getCompanyDetailsForReview;
 /**
  * Approve a company's completed profile
  */

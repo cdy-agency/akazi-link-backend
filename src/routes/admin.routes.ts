@@ -11,6 +11,7 @@ enableCompany,
 deleteCompany,
   listAllUsers,
   getCompaniesPendingReview,
+  getCompanyDetailsForReview,
   approveCompanyProfile,
   rejectCompanyProfile,
   getAllEmployees,
@@ -392,6 +393,7 @@ router.get('/users-all', listAllUsers);
 
 // Company profile review endpoints
 router.get('/companies/pending-review', getCompaniesPendingReview);
+router.get('/company/:id', getCompanyDetailsForReview);
 router.patch('/company/:id/approve-profile', approveCompanyProfile);
 router.patch('/company/:id/reject-profile', rejectCompanyProfile);
 router.get('/employees', getAllEmployees);
