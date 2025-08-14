@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.authorizeRoles = exports.authenticateToken = void 0;
+exports.authorizeCompany = exports.authorizeRoles = exports.authenticateToken = void 0;
 const authUtils_1 = require("../utils/authUtils");
 const Company_1 = __importDefault(require("../models/Company"));
 /**
@@ -51,3 +51,36 @@ const authorizeRoles = (allowedRoles) => {
     };
 };
 exports.authorizeRoles = authorizeRoles;
+/**
+ * authorizeCompany with optional approval requirement.
+ * - When requireApproval is true (default), behaves like authorizeRoles(['company']).
+ * - When requireApproval is false, allows pending/rejected companies to access,
+ *   but still blocks disabled/deleted and inactive accounts.
+ */
+const authorizeCompany = (options) => {
+    const { requireApproval = true } = options || {};
+    return async (req, res, next) => {
+        if (!req.user) {
+            return res.status(403).json({ message: 'Access Denied: User not authenticated' });
+        }
+        const { id, role } = req.user;
+        if (role !== 'company') {
+            return res.status(403).json({ message: 'Access Denied: Insufficient permissions' });
+        }
+        const company = await Company_1.default.findById(id);
+        if (!company) {
+            return res.status(403).json({ message: 'Access Denied: Company not found' });
+        }
+        // Always block disabled or deleted
+        if (company.status === 'disabled' || company.status === 'deleted' || !company.isActive) {
+            return res.status(403).json({ message: 'Access Denied: Company account is disabled or deleted' });
+        }
+        if (requireApproval) {
+            if (!company.isApproved || company.status === 'rejected') {
+                return res.status(403).json({ message: 'Access Denied: Company not approved' });
+            }
+        }
+        next();
+    };
+};
+exports.authorizeCompany = authorizeCompany;

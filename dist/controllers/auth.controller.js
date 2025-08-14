@@ -188,18 +188,18 @@ const registerCompany = async (req, res) => {
             location,
             phoneNumber,
             website,
-            logo: logo.url,
-            isApproved: false, // Companies need admin approval
-            status: 'pending', // Initial status
-            isActive: true, // Initially active
+            // Store full file info object when provided by rod-fileupload middleware.
+            // If a legacy string URL is provided, skip setting logo to avoid schema cast errors.
+            ...(logo && typeof logo === 'object' ? { logo } : {}),
+            isApproved: false,
+            status: 'pending',
+            isActive: true,
         });
-        console.log('company details:', req.body);
-        console.log('file', req.body.file);
         res.status(201).json({ message: 'Company registered successfully. Awaiting admin approval.', company: company.toJSON() });
     }
     catch (error) {
         console.error('Error registering company:', error);
-        res.status(500).json({ message: 'Server error during company registration',error });
+        res.status(500).json({ message: 'Server error during company registration', error });
     }
 };
 exports.registerCompany = registerCompany;
@@ -297,8 +297,7 @@ const login = async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error during login:', error);
-        res.status(500).json({ message: 'Server error during login' });
+        res.status(500).json({ message: 'Server error during login', error });
     }
 };
 exports.login = login;
@@ -324,8 +323,7 @@ const companyCompleteProfile = async (req, res) => {
         res.status(200).json({ message: 'Details submitted', company });
     }
     catch (error) {
-        console.error('Error completing company profile:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Server error', error });
     }
 };
 exports.companyCompleteProfile = companyCompleteProfile;

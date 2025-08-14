@@ -367,4 +367,9 @@ router.patch('/company/:id/enable', admin_controller_1.enableCompany);
 router.delete('/company/:id/delete', admin_controller_1.deleteCompany);
 // List all users - admin only
 router.get('/users-all', admin_controller_1.listAllUsers);
+// Company profile review endpoints
+router.get('/companies/pending-review', admin_controller_1.getCompaniesPendingReview);
+router.patch('/company/:id/approve-profile', admin_controller_1.approveCompanyProfile);
+router.patch('/company/:id/reject-profile', admin_controller_1.rejectCompanyProfile);
+router.get('/employees', admin_controller_1.getAllEmployees);
 exports.default = router;

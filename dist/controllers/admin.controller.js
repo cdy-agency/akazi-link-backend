@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getLoggedInAdmin = exports.listAllUsers = exports.deleteCompany = exports.enableCompany = exports.disableCompany = exports.rejectCompany = exports.approveCompany = exports.getCompanies = exports.getEmployees = exports.updateAdminPassword = exports.adminLogin = void 0;
+exports.rejectCompanyProfile = exports.getAllEmployees = exports.approveCompanyProfile = exports.getCompaniesPendingReview = exports.getLoggedInAdmin = exports.listAllUsers = exports.deleteCompany = exports.enableCompany = exports.disableCompany = exports.rejectCompany = exports.approveCompany = exports.getCompanies = exports.getEmployees = exports.updateAdminPassword = exports.adminLogin = void 0;
 const User_1 = __importDefault(require("../models/User"));
 const Company_1 = __importDefault(require("../models/Company"));
 const Employee_1 = __importDefault(require("../models/Employee"));
@@ -283,15 +283,22 @@ exports.getCompanies = getCompanies;
 const approveCompany = async (req, res) => {
     try {
         const { id } = req.params;
+        console.log('Approving company with ID:', id);
+        console.log('ID type:', typeof id);
+        console.log('ID length:', id?.length);
         if (!mongoose_1.Types.ObjectId.isValid(id)) {
+            console.log('Invalid ObjectId:', id);
             return res.status(400).json({ message: 'Invalid Company ID' });
         }
+        console.log('ObjectId is valid, searching for company...');
         const company = await Company_1.default.findByIdAndUpdate(id, {
             isApproved: true,
             status: 'approved',
             isActive: true
         }, { new: true }).select('-password');
+        console.log('Company found:', company);
         if (!company) {
+            console.log('Company not found in database');
             return res.status(404).json({ message: 'Company not found' });
         }
         res.status(200).json({ message: 'Company approved successfully', company });
@@ -636,3 +643,95 @@ const getLoggedInAdmin = async (req, res) => {
     }
 };
 exports.getLoggedInAdmin = getLoggedInAdmin;
+/**
+ * Get all companies for admin review
+ */
+const getCompaniesPendingReview = async (req, res) => {
+    try {
+        const companies = await Company_1.default.find({}).select('-password').sort({ createdAt: -1 });
+        res.status(200).json({
+            message: 'All companies retrieved successfully',
+            companies
+        });
+    }
+    catch (error) {
+        console.error('Error getting companies:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+exports.getCompaniesPendingReview = getCompaniesPendingReview;
+/**
+ * Approve a company's completed profile
+ */
+const approveCompanyProfile = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!mongoose_1.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid Company ID' });
+        }
+        const company = await Company_1.default.findByIdAndUpdate(id, {
+            isApproved: true,
+            status: 'approved',
+            isActive: true,
+            profileCompletionStatus: 'complete'
+        }, { new: true }).select('-password');
+        if (!company) {
+            return res.status(404).json({ message: 'Company not found' });
+        }
+        res.status(200).json({ message: 'Company profile approved successfully', company });
+    }
+    catch (error) {
+        console.error('Error approving company profile:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+exports.approveCompanyProfile = approveCompanyProfile;
+/**
+ * Get all employees for admin management
+ */
+const getAllEmployees = async (req, res) => {
+    try {
+        const employees = await Employee_1.default.find({}).select('-password').sort({ createdAt: -1 });
+        res.status(200).json({
+            message: 'All employees retrieved successfully',
+            employees
+        });
+    }
+    catch (error) {
+        console.error('Error getting employees:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+exports.getAllEmployees = getAllEmployees;
+/**
+ * Reject a company's completed profile
+ */
+const rejectCompanyProfile = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { rejectionReason } = req.body;
+        if (!mongoose_1.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid Company ID' });
+        }
+        if (!rejectionReason) {
+            return res.status(400).json({ message: 'Rejection reason is required' });
+        }
+        const company = await Company_1.default.findByIdAndUpdate(id, {
+            isApproved: false,
+            status: 'rejected',
+            isActive: false,
+            rejectionReason,
+            profileCompletionStatus: 'incomplete',
+            rejectedAt: new Date()
+        }, { new: true }).select('-password');
+        if (!company) {
+            return res.status(404).json({ message: 'Company not found' });
+        }
+        res.status(200).json({ message: 'Company profile rejected successfully', company });
+    }
+    catch (error) {
+        console.error('Error rejecting company profile:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+exports.rejectCompanyProfile = rejectCompanyProfile;

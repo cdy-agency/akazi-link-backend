@@ -4,12 +4,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = require("mongoose");
-const User_1 = __importDefault(require("./User")); // Import the base User model
+const User_1 = __importDefault(require("./User"));
 const EmployeeSchema = new mongoose_1.Schema({
     name: { type: String, required: true },
     dateOfBirth: { type: Date },
     phoneNumber: { type: String },
-    // Extended profile fields
     jobPreferences: { type: [String], default: [] },
     about: { type: String },
     experience: { type: String },
