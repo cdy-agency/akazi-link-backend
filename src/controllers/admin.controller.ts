@@ -167,34 +167,7 @@ try {
 }
 };
 
-/**
-* @swagger
-* /api/admin/employees:
-*   get:
-*     summary: Get all registered employees
-*     tags: [Admin]
-*     security:
-*       - bearerAuth: []
-*     responses:
-*       200:
-*         description: Employees retrieved successfully
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Employees retrieved successfully
-*                 employees:
-*                   type: array
-*                   items:
-*                     $ref: '#/components/schemas/Employee'
-*       403:
-*         description: Access Denied
-*       500:
-*         description: Server error
-*/
+
 export const getEmployees = async (req: Request, res: Response) => {
 try {
   const employees = await Employee.find().select('-password'); // Exclude passwords
@@ -243,44 +216,6 @@ try {
 }
 };
 
-/**
-* @swagger
-* /api/admin/company/{id}/approve:
-*   patch:
-*     summary: Approve a company
-*     tags: [Admin]
-*     security:
-*       - bearerAuth: []
-*     parameters:
-*       - in: path
-*         name: id
-*         required: true
-*         schema:
-*           type: string
-*           format: mongo-id
-*         description: ID of the company to approve
-*     responses:
-*       200:
-*         description: Company approved successfully
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Company approved successfully
-*                 company:
-*                   $ref: '#/components/schemas/Company'
-*       400:
-*         description: Invalid Company ID
-*       403:
-*         description: Access Denied
-*       404:
-*         description: Company not found
-*       500:
-*         description: Server error
-*/
 export const approveCompany = async (req: Request, res: Response) => {
 try {
   const { id } = req.params;
