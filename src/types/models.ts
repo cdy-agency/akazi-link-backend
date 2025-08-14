@@ -1,5 +1,16 @@
 import { Document, Types } from 'mongoose';
 
+// File interface for storing file information
+export interface IFileInfo {
+  url: string;
+  public_id: string;
+  format: string;
+  size: number;
+  name: string;
+  type: string;
+  time: string;
+}
+
 export interface IUser extends Document {
 email: string;
 image?: string;
@@ -14,16 +25,18 @@ companyName: string;
 location?: string;
 phoneNumber?: string;
 website?: string;
-logo?: string; // URL to logo
+logo?: IFileInfo; // Updated to store file info object
 isApproved: boolean;
 password: string;
 about?: string;
-documents?: string[];
+documents?: IFileInfo[]; // Updated to store file info objects
 status: 'pending' | 'approved' | 'rejected' | 'disabled' | 'deleted';
 isActive: boolean;
 rejectionReason?: string;
 disabledAt?: Date;
 deletedAt?: Date;
+profileCompletionStatus: 'incomplete' | 'complete' | 'pending_review';
+profileCompletedAt?: Date;
 }
 
 export interface IEmployee extends IUser {

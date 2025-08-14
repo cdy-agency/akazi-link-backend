@@ -199,7 +199,7 @@ const registerCompany = async (req, res) => {
     }
     catch (error) {
         console.error('Error registering company:', error);
-        res.status(500).json({ message: 'Server error during company registration' });
+        res.status(500).json({ message: 'Server error during company registration',error });
     }
 };
 exports.registerCompany = registerCompany;

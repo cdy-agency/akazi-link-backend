@@ -172,7 +172,7 @@ try {
 */
 export const registerCompany = async (req: Request, res: Response) => {
 try {
-  const { companyName, email, password, location, phoneNumber, website, logo } = req.body;
+  const { companyName, email, password, location, phoneNumber, website, logo } = req.body as any;
 
   if (!companyName || !email || !password) {
     return res.status(400).json({ message: 'Please provide company name, email, and password' });
@@ -193,7 +193,9 @@ try {
     location,
     phoneNumber,
     website,
-    logo: logo.url,
+    // Store full file info object when provided by rod-fileupload middleware.
+    // If a legacy string URL is provided, skip setting logo to avoid schema cast errors.
+    ...(logo && typeof logo === 'object' ? { logo } : {}),
     isApproved: false, 
     status: 'pending',
     isActive: true,
@@ -202,7 +204,7 @@ try {
   res.status(201).json({ message: 'Company registered successfully. Awaiting admin approval.', company: company.toJSON() });
 } catch (error) {
   console.error('Error registering company:', error);
-  res.status(500).json({ message: 'Server error during company registration' });
+  res.status(500).json({ message: 'Server error during company registration' ,error});
 }
 };
 

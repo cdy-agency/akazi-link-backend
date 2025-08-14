@@ -5,6 +5,8 @@ import Job from '../models/Job';
 import Application from '../models/Application';
 import { Types } from 'mongoose';
 import WorkRequest from '../models/WorkRequest';
+import { comparePasswords, hashPassword } from '../utils/authUtils';
+import { IFileInfo } from '../types/models';
 
 /**
 * @swagger
@@ -53,7 +55,19 @@ try {
     return res.status(404).json({ message: 'Company not found' });
   }
 
-  res.status(200).json({ message: 'Company profile retrieved successfully', company });
+  // Provide a status notice for frontend popup/banner
+  let statusNotice: string | undefined;
+  if (company.status === 'approved' && company.profileCompletionStatus === 'complete') {
+    statusNotice = 'Your company is approved. You can now post jobs.';
+  } else if (company.profileCompletionStatus === 'complete' && company.status === 'pending') {
+    statusNotice = 'Congratulations! You have completed your profile. Please wait for admin approval.';
+  } else if (company.profileCompletionStatus === 'pending_review') {
+    statusNotice = 'Your profile has been submitted and is pending admin review.';
+  } else if (company.profileCompletionStatus === 'incomplete') {
+    statusNotice = 'Complete your profile to unlock job posting and other features.';
+  }
+
+  res.status(200).json({ message: 'Company profile retrieved successfully', company, statusNotice });
 } catch (error) {
   console.error('Error getting company profile:', error);
   res.status(500).json({ message: 'Server error' });
@@ -117,12 +131,35 @@ try {
     return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
   }
 
-  const updates = req.body;
-  // Prevent updating sensitive fields like email, password, role, isApproved via this endpoint
+  const { oldPassword, newPassword, logo, documents, ...updates } = req.body;
+  
+  // Prevent updating sensitive fields like email, role, isApproved via this endpoint
   delete updates.email;
-  delete updates.password;
   delete updates.role;
   delete updates.isApproved;
+
+  // Block file fields here; they must go through dedicated endpoints to ensure proper FileInfo typing
+  delete (updates as any).logo;
+  delete (updates as any).documents;
+
+  // Handle password change if new password is provided
+  if (newPassword) {
+    if (!oldPassword) {
+      return res.status(400).json({ message: 'Old password is required when setting a new password' });
+    }
+
+    const company = await Company.findById(companyId);
+    if (!company) {
+      return res.status(404).json({ message: 'Company not found' });
+    }
+
+    const isMatch = await comparePasswords(oldPassword, company.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid old password' });
+    }
+
+    updates.password = await hashPassword(newPassword);
+  }
 
   const company = await Company.findByIdAndUpdate(companyId, { $set: updates }, { new: true, runValidators: true }).select('-password');
   if (!company) {
@@ -138,7 +175,7 @@ try {
 
 /**
  * Next-step completion endpoint for companies to provide missing details
- * Expects: about (string), documents (array of strings or single string)
+ * Expects: about (string), logo (IFileInfo), documents (IFileInfo[])
  */
 export const completeCompanyProfile = async (req: Request, res: Response) => {
   try {
@@ -147,11 +184,22 @@ export const completeCompanyProfile = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
     }
 
-    const { about, documents } = req.body as { about?: string; documents?: string[] | string };
+
+
+    const bodyAny = req.body as any;
+    const about = typeof bodyAny.about === 'string' ? bodyAny.about : undefined;
+    const logo = bodyAny.logo as IFileInfo | undefined;
+    const rawDocs = bodyAny.documents as any;
+    const documents: IFileInfo[] | undefined = Array.isArray(rawDocs) ? rawDocs : rawDocs ? [rawDocs] : undefined;
 
     const set: any = {};
     if (typeof about === 'string') set.about = about;
-    if (documents) set.documents = Array.isArray(documents) ? documents : [documents];
+    if (logo) set.logo = logo;
+    if (documents && Array.isArray(documents)) set.documents = documents;
+    
+    // Mark profile as complete (not pending review)
+    set.profileCompletionStatus = 'complete';
+    set.profileCompletedAt = new Date();
 
     const company = await Company.findByIdAndUpdate(
       companyId,
@@ -161,7 +209,7 @@ export const completeCompanyProfile = async (req: Request, res: Response) => {
 
     if (!company) return res.status(404).json({ message: 'Company not found' });
 
-    res.status(200).json({ message: 'Company details submitted for review', company });
+    res.status(200).json({ message: 'Company profile completed and submitted for review', company });
   } catch (error) {
     console.error('Error completing company profile:', error);
     res.status(500).json({ message: 'Server error' });
@@ -494,6 +542,207 @@ export const sendWorkRequest = async (req: Request, res: Response) => {
     res.status(201).json({ message: 'Work request sent', work });
   } catch (error) {
     console.error('Error sending work request:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Upload company logo
+ */
+export const uploadLogo = async (req: Request, res: Response) => {
+  try {
+    const companyId = req.user?.id;
+    if (!companyId) {
+      return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+    }
+
+    const logoFile = req.body.logo as IFileInfo;
+    if (!logoFile) {
+      return res.status(400).json({ message: 'No logo file uploaded' });
+    }
+
+    const company = await Company.findByIdAndUpdate(
+      companyId,
+      { logo: logoFile },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!company) {
+      return res.status(404).json({ message: 'Company not found' });
+    }
+
+    res.status(200).json({ message: 'Logo uploaded successfully', company });
+  } catch (error) {
+    console.error('Error uploading logo:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Upload company documents
+ */
+export const uploadDocuments = async (req: Request, res: Response) => {
+  try {
+    const companyId = req.user?.id;
+    if (!companyId) {
+      return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+    }
+
+    console.log('=== uploadDocuments DEBUG ===');
+    console.log('req.body:', JSON.stringify(req.body, null, 2));
+    console.log('===================================');
+
+    const rawDocs = (req.body as any).documents as any;
+    const documents: IFileInfo[] = Array.isArray(rawDocs) ? rawDocs : rawDocs ? [rawDocs] : [];
+    if (!documents || documents.length === 0) {
+      return res.status(400).json({ message: 'No documents uploaded' });
+    }
+
+    const company = await Company.findByIdAndUpdate(
+      companyId,
+      { $push: { documents: { $each: documents } } },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!company) {
+      return res.status(404).json({ message: 'Company not found' });
+    }
+
+    res.status(200).json({ message: 'Documents uploaded successfully', company });
+  } catch (error) {
+    console.error('Error uploading documents:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Update company logo
+ */
+export const updateLogo = async (req: Request, res: Response) => {
+  try {
+    const companyId = req.user?.id;
+    if (!companyId) {
+      return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+    }
+
+    console.log('=== updateLogo DEBUG ===');
+    console.log('req.body:', JSON.stringify(req.body, null, 2));
+    console.log('===================================');
+
+    const logoFile = req.body.logo as IFileInfo;
+    if (!logoFile) {
+      return res.status(400).json({ message: 'No logo file uploaded' });
+    }
+
+    const company = await Company.findByIdAndUpdate(
+      companyId,
+      { logo: logoFile },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!company) {
+      return res.status(404).json({ message: 'Company not found' });
+    }
+
+    res.status(200).json({ message: 'Logo updated successfully', company });
+  } catch (error) {
+    console.error('Error updating logo:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Update company documents
+ */
+export const updateDocuments = async (req: Request, res: Response) => {
+  try {
+    const companyId = req.user?.id;
+    if (!companyId) {
+      return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+    }
+
+    const rawDocs = (req.body as any).documents as any;
+    const documents: IFileInfo[] = Array.isArray(rawDocs) ? rawDocs : rawDocs ? [rawDocs] : [];
+    if (!documents || documents.length === 0) {
+      return res.status(400).json({ message: 'No documents provided' });
+    }
+
+    const company = await Company.findByIdAndUpdate(
+      companyId,
+      { documents: documents },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!company) {
+      return res.status(404).json({ message: 'Company not found' });
+    }
+
+    res.status(200).json({ message: 'Documents updated successfully', company });
+  } catch (error) {
+    console.error('Error updating documents:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Delete company logo
+ */
+export const deleteLogo = async (req: Request, res: Response) => {
+  try {
+    const companyId = req.user?.id;
+    if (!companyId) {
+      return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+    }
+
+    const company = await Company.findByIdAndUpdate(
+      companyId,
+      { $unset: { logo: 1 } },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!company) {
+      return res.status(404).json({ message: 'Company not found' });
+    }
+
+    res.status(200).json({ message: 'Logo deleted successfully', company });
+  } catch (error) {
+    console.error('Error deleting logo:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Delete specific document by index
+ */
+export const deleteDocument = async (req: Request, res: Response) => {
+  try {
+    const companyId = req.user?.id;
+    const { index } = req.params;
+    
+    if (!companyId) {
+      return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+    }
+
+    const documentIndex = parseInt(index);
+    if (isNaN(documentIndex) || documentIndex < 0) {
+      return res.status(400).json({ message: 'Invalid document index' });
+    }
+
+    const company = await Company.findById(companyId);
+    if (!company) {
+      return res.status(404).json({ message: 'Company not found' });
+    }
+
+    if (!company.documents || documentIndex >= company.documents.length) {
+      return res.status(400).json({ message: 'Document index out of range' });
+    }
+
+    company.documents.splice(documentIndex, 1);
+    await company.save();
+
+    res.status(200).json({ message: 'Document deleted successfully', company });
+  } catch (error) {
+    console.error('Error deleting document:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

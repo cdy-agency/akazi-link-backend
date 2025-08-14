@@ -10,6 +10,10 @@ disableCompany,
 enableCompany,
 deleteCompany,
   listAllUsers,
+  getCompaniesPendingReview,
+  approveCompanyProfile,
+  rejectCompanyProfile,
+  getAllEmployees,
 } from '../controllers/admin.controller';
 import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware';
 import uploadSingle from 'rod-fileupload';
@@ -385,5 +389,11 @@ router.delete('/company/:id/delete', deleteCompany);
 
 // List all users - admin only
 router.get('/users-all', listAllUsers);
+
+// Company profile review endpoints
+router.get('/companies/pending-review', getCompaniesPendingReview);
+router.patch('/company/:id/approve-profile', approveCompanyProfile);
+router.patch('/company/:id/reject-profile', rejectCompanyProfile);
+router.get('/employees', getAllEmployees);
 
 export default router;

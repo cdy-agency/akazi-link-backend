@@ -7,15 +7,20 @@ getApplicantsForJob,
 updateProfile,
 completeCompanyProfile,
 updateApplicationStatus,
+uploadLogo,
+uploadDocuments,
+updateLogo,
+updateDocuments,
+deleteLogo,
+deleteDocument,
 } from '../controllers/company.controller';
-import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware';
-import uploadSingle from "rod-fileupload"
+import { authenticateToken, authorizeRoles, authorizeCompany } from '../middlewares/authMiddleware';
+import uploadSingle, { uploadMultiple } from "rod-fileupload"
 import cloudinary from '../config/cloudinary';
 
 const router = Router();
 
 router.use(authenticateToken); // All company routes require authentication
-router.use(authorizeRoles(['company'])); // All company routes require company role and approval
 
 /**
  * @swagger
@@ -37,7 +42,8 @@ router.use(authorizeRoles(['company'])); // All company routes require company r
  *       403:
  *         description: Forbidden - not a company or not approved
  */
-router.get('/profile', getProfile);
+// Allow unapproved but active companies to fetch profile
+router.get('/profile', authorizeCompany({ requireApproval: false }), getProfile);
 
 /**
  * @swagger
@@ -89,9 +95,11 @@ router.get('/profile', getProfile);
  *       403:
  *         description: Forbidden - not a company or not approved
  */
-router.patch('/profile', updateProfile);
+// Allow unapproved but active companies to update basics/password (not jobs)
+router.patch('/profile', authorizeCompany({ requireApproval: false }), updateProfile);
 // Company completes missing information (about, documents)
-router.patch('/complete-profile', completeCompanyProfile);
+// Allow unapproved but active companies to complete profile and upload files
+router.patch('/complete-profile', authorizeCompany({ requireApproval: false }), completeCompanyProfile);
 
 /**
  * @swagger
@@ -160,7 +168,8 @@ router.patch('/complete-profile', completeCompanyProfile);
  *       403:
  *         description: Forbidden - not a company or not approved
  */
-router.post('/job',uploadSingle('image', cloudinary), postJob);
+// Posting jobs still requires approval
+router.post('/job', authorizeCompany({ requireApproval: true }), uploadSingle('image', cloudinary), postJob);
 
 /**
  * @swagger
@@ -184,7 +193,7 @@ router.post('/job',uploadSingle('image', cloudinary), postJob);
  *       403:
  *         description: Forbidden - not a company or not approved
  */
-router.get('/jobs', getCompanyJobs);
+router.get('/jobs', authorizeCompany({ requireApproval: true }), getCompanyJobs);
 
 /**
  * @swagger
@@ -218,14 +227,22 @@ router.get('/jobs', getCompanyJobs);
  *       404:
  *         description: Job not found
  */
-router.get('/applicants/:jobId', getApplicantsForJob);
+router.get('/applicants/:jobId', authorizeCompany({ requireApproval: true }), getApplicantsForJob);
 
 // Update application status
-router.patch('/applications/:applicationId/status', updateApplicationStatus);
+router.patch('/applications/:applicationId/status', authorizeCompany({ requireApproval: true }), updateApplicationStatus);
 
 // Browse employees and send work requests
 import { browseEmployees, sendWorkRequest } from '../controllers/company.controller';
-router.get('/employees', browseEmployees);
-router.post('/work-requests', sendWorkRequest);
+router.get('/employees', authorizeCompany({ requireApproval: true }), browseEmployees);
+router.post('/work-requests', authorizeCompany({ requireApproval: true }), sendWorkRequest);
+
+// File upload endpoints
+router.post('/upload/logo', authorizeCompany({ requireApproval: false }), uploadSingle('logo', cloudinary), uploadLogo);
+router.post('/upload/documents', authorizeCompany({ requireApproval: false }), uploadMultiple('documents', cloudinary), uploadDocuments);
+router.patch('/update/logo', authorizeCompany({ requireApproval: false }), uploadSingle('logo', cloudinary), updateLogo);
+router.patch('/update/documents', authorizeCompany({ requireApproval: false }), uploadMultiple('documents', cloudinary), updateDocuments);
+router.delete('/delete/logo', authorizeCompany({ requireApproval: false }), deleteLogo);
+router.delete('/delete/document/:index', authorizeCompany({ requireApproval: false }), deleteDocument);
 
 export default router;

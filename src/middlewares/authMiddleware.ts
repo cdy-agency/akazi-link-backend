@@ -53,3 +53,36 @@ return async (req: Request, res: Response, next: NextFunction) => {
   next();
 };
 };
+
+/**
+ * authorizeCompany with optional approval requirement.
+ * - When requireApproval is true (default), behaves like authorizeRoles(['company']).
+ * - When requireApproval is false, allows pending/rejected companies to access,
+ *   but still blocks disabled/deleted and inactive accounts.
+ */
+export const authorizeCompany = (options?: { requireApproval?: boolean }) => {
+  const { requireApproval = true } = options || {};
+  return async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(403).json({ message: 'Access Denied: User not authenticated' });
+    }
+    const { id, role } = req.user;
+    if (role !== 'company') {
+      return res.status(403).json({ message: 'Access Denied: Insufficient permissions' });
+    }
+    const company = await Company.findById(id);
+    if (!company) {
+      return res.status(403).json({ message: 'Access Denied: Company not found' });
+    }
+    // Always block disabled or deleted
+    if (company.status === 'disabled' || company.status === 'deleted' || !company.isActive) {
+      return res.status(403).json({ message: 'Access Denied: Company account is disabled or deleted' });
+    }
+    if (requireApproval) {
+      if (!company.isApproved || company.status === 'rejected') {
+        return res.status(403).json({ message: 'Access Denied: Company not approved' });
+      }
+    }
+    next();
+  };
+};

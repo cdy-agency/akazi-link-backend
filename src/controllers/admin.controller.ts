@@ -684,3 +684,110 @@ export const getLoggedInAdmin = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+/**
+ * Get all companies for admin review
+ */
+export const getCompaniesPendingReview = async (req: Request, res: Response) => {
+  try {
+    const companies = await Company.find({}).select('-password').sort({ createdAt: -1 });
+    
+    res.status(200).json({ 
+      message: 'All companies retrieved successfully', 
+      companies 
+    });
+  } catch (error) {
+    console.error('Error getting companies:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Approve a company's completed profile
+ */
+export const approveCompanyProfile = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid Company ID' });
+    }
+
+    const company = await Company.findByIdAndUpdate(
+      id, 
+      { 
+        isApproved: true, 
+        status: 'approved',
+        isActive: true,
+        profileCompletionStatus: 'complete'
+      }, 
+      { new: true }
+    ).select('-password');
+    
+    if (!company) {
+      return res.status(404).json({ message: 'Company not found' });
+    }
+
+    res.status(200).json({ message: 'Company profile approved successfully', company });
+  } catch (error) {
+    console.error('Error approving company profile:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Get all employees for admin management
+ */
+export const getAllEmployees = async (req: Request, res: Response) => {
+  try {
+    const employees = await Employee.find({}).select('-password').sort({ createdAt: -1 });
+    
+    res.status(200).json({ 
+      message: 'All employees retrieved successfully', 
+      employees 
+    });
+  } catch (error) {
+    console.error('Error getting employees:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Reject a company's completed profile
+ */
+export const rejectCompanyProfile = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { rejectionReason } = req.body;
+
+    if (!Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid Company ID' });
+    }
+
+    if (!rejectionReason) {
+      return res.status(400).json({ message: 'Rejection reason is required' });
+    }
+
+    const company = await Company.findByIdAndUpdate(
+      id, 
+      { 
+        isApproved: false, 
+        status: 'rejected',
+        isActive: false,
+        rejectionReason,
+        profileCompletionStatus: 'incomplete',
+        rejectedAt: new Date()
+      }, 
+      { new: true }
+    ).select('-password');
+    
+    if (!company) {
+      return res.status(404).json({ message: 'Company not found' });
+    }
+
+    res.status(200).json({ message: 'Company profile rejected successfully', company });
+  } catch (error) {
+    console.error('Error rejecting company profile:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
