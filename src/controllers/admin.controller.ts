@@ -301,7 +301,9 @@ try {
     { 
       isApproved: true, 
       status: 'approved',
-      isActive: true 
+      isActive: true,
+      profileCompletionStatus: 'complete',
+      profileCompletedAt: new Date()
     }, 
     { new: true }
   ).select('-password');
@@ -391,7 +393,8 @@ try {
       status: 'rejected',
       isActive: false,
       rejectionReason,
-      rejectedAt: new Date()
+      rejectedAt: new Date(),
+      profileCompletionStatus: 'incomplete'
     }, 
     { new: true }
   ).select('-password');
@@ -530,7 +533,8 @@ try {
     { 
       isActive: true, 
       status: company.isApproved ? 'approved' : 'pending',
-      disabledAt: undefined
+      disabledAt: undefined,
+      ...(company.isApproved ? { profileCompletionStatus: 'complete' } : {})
     }, 
     { new: true }
   ).select('-password');
@@ -690,10 +694,10 @@ export const getLoggedInAdmin = async (req: Request, res: Response) => {
  */
 export const getCompaniesPendingReview = async (req: Request, res: Response) => {
   try {
-    const companies = await Company.find({}).select('-password').sort({ createdAt: -1 });
+    const companies = await Company.find({ profileCompletionStatus: 'pending_review', status: { $in: ['pending'] } }).select('-password').sort({ createdAt: -1 });
     
     res.status(200).json({ 
-      message: 'All companies retrieved successfully', 
+      message: 'Companies pending review retrieved successfully', 
       companies 
     });
   } catch (error) {
