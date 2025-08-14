@@ -369,6 +369,7 @@ router.delete('/company/:id/delete', admin_controller_1.deleteCompany);
 router.get('/users-all', admin_controller_1.listAllUsers);
 // Company profile review endpoints
 router.get('/companies/pending-review', admin_controller_1.getCompaniesPendingReview);
+router.get('/company/:id', admin_controller_1.getCompanyDetailsForReview);
 router.patch('/company/:id/approve-profile', admin_controller_1.approveCompanyProfile);
 router.patch('/company/:id/reject-profile', admin_controller_1.rejectCompanyProfile);
 router.get('/employees', admin_controller_1.getAllEmployees);

@@ -707,6 +707,70 @@ export const getCompaniesPendingReview = async (req: Request, res: Response) => 
 };
 
 /**
+ * @swagger
+ * /api/admin/company/{id}:
+ *   get:
+ *     summary: Get full company details for review
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: mongo-id
+ *         description: ID of the company to review
+ *     responses:
+ *       200:
+ *         description: Company details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Company details retrieved successfully
+ *                 company:
+ *                   $ref: '#/components/schemas/Company'
+ *       400:
+ *         description: Invalid Company ID
+ *       403:
+ *         description: Access Denied
+ *       404:
+ *         description: Company not found
+ *       500:
+ *         description: Server error
+ */
+export const getCompanyDetailsForReview = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid Company ID' });
+    }
+
+    const company = await Company.findById(id).select('-password');
+    if (!company) {
+      return res.status(404).json({ message: 'Company not found' });
+    }
+
+    // Optionally ensure it's in pending_review stage
+    // If you want to strictly restrict to pending review, uncomment below:
+    // if (company.profileCompletionStatus !== 'pending_review') {
+    //   return res.status(400).json({ message: 'Company is not in pending review state' });
+    // }
+
+    res.status(200).json({ message: 'Company details retrieved successfully', company });
+  } catch (error) {
+    console.error('Error retrieving company details for review:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
  * Approve a company's completed profile
  */
 export const approveCompanyProfile = async (req: Request, res: Response) => {
