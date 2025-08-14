@@ -98,18 +98,27 @@ Key Endpoints (paths are prefixed with /api)
 Auth
 - POST /auth/register/employee
 - POST /auth/register/company
-  - Uses rod-fileupload with field "logo" to upload and attach req.body.logo (FileInfo)
+  - Uses rod-fileupload with field "logo" to optionally upload and attach req.body.logo (FileInfo). If omitted, logo remains unset.
 - POST /auth/login
 - PATCH /auth/company/complete (company can submit about + documents before approval)
 
 Company (requires role=company; some actions require approval)
 - GET /company/profile
+  - Returns { company, statusNotice }
+  - statusNotice values:
+    - approved + complete: "Your company is approved. You can now post jobs."
+    - complete + pending: "Congratulations! You have completed your profile. Please wait for admin approval."
+    - pending_review: "Your profile has been submitted and is pending admin review."
+    - incomplete: "Complete your profile to unlock job posting and other features."
 - PATCH /company/profile
   - Update basic fields and optionally change password:
     - Only requires oldPassword if newPassword is provided
 - PATCH /company/complete-profile
-  - Accepts multipart/form-data with about, optional logo (File), documents (Files)
-  - Sets profileCompletionStatus to 'pending_review'
+  - Accepts multipart/form-data with:
+    - about: string (required for submission)
+    - logo: File (optional)
+    - documents: Files (at least 1 required for submission)
+  - Auto-sets profileCompletionStatus to 'pending_review' when about + documents are present. Admin approval sets it to 'complete'.
 - File operations (rod-fileupload):
   - POST  /company/upload/logo           (field: logo)        → saves req.body.logo (FileInfo) into company.logo
   - POST  /company/upload/documents      (field: documents)   → pushes FileInfo[] into company.documents
@@ -118,10 +127,10 @@ Company (requires role=company; some actions require approval)
   - DELETE /company/delete/logo
   - DELETE /company/delete/document/:index
 - Jobs:
-  - POST /company/job (field: image) → create job with image.url
-  - GET  /company/jobs
-  - GET  /company/applicants/:jobId
-  - PATCH /company/applications/:applicationId/status
+  - POST /company/job (field: image) → create job with image.url (requires admin approval)
+  - GET  /company/jobs (requires admin approval)
+  - GET  /company/applicants/:jobId (requires admin approval)
+  - PATCH /company/applications/:applicationId/status (requires admin approval)
 - Directory & requests:
   - GET  /company/employees
   - POST /company/work-requests
@@ -138,9 +147,9 @@ Admin (requires role=superadmin)
   - PATCH /admin/company/:id/enable
   - DELETE /admin/company/:id/delete
 - Company profile review flow:
-  - GET   /admin/companies/pending-review
-  - PATCH /admin/company/:id/approve-profile → sets isApproved=true, status=approved, profileCompletionStatus=complete
-  - PATCH /admin/company/:id/reject-profile  → sets status=rejected, isActive=false, requires rejectionReason
+  - GET   /admin/companies/pending-review → lists companies where profileCompletionStatus='pending_review' and status='pending'
+  - PATCH /admin/company/:id/approve-profile → sets isApproved=true, status=approved, profileCompletionStatus=complete, profileCompletedAt set
+  - PATCH /admin/company/:id/reject-profile  → sets status=rejected, isActive=false, profileCompletionStatus=incomplete, requires rejectionReason
 
 Frontend Integration Notes
 - File Uploads (rod-fileupload):
