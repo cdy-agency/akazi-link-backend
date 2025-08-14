@@ -301,7 +301,9 @@ try {
     { 
       isApproved: true, 
       status: 'approved',
-      isActive: true 
+      isActive: true,
+      profileCompletionStatus: 'complete',
+      profileCompletedAt: new Date()
     }, 
     { new: true }
   ).select('-password');
@@ -391,7 +393,8 @@ try {
       status: 'rejected',
       isActive: false,
       rejectionReason,
-      rejectedAt: new Date()
+      rejectedAt: new Date(),
+      profileCompletionStatus: 'incomplete'
     }, 
     { new: true }
   ).select('-password');
@@ -530,7 +533,8 @@ try {
     { 
       isActive: true, 
       status: company.isApproved ? 'approved' : 'pending',
-      disabledAt: undefined
+      disabledAt: undefined,
+      ...(company.isApproved ? { profileCompletionStatus: 'complete' } : {})
     }, 
     { new: true }
   ).select('-password');

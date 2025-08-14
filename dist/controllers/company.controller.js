@@ -192,7 +192,10 @@ const updateProfile = async (req, res) => {
         if (!company) {
             return res.status(404).json({ message: 'Company not found' });
         }
-        res.status(200).json({ message: 'Company profile updated successfully', company });
+        // Recompute profile completion state if relevant fields changed (e.g., about)
+        await recomputeProfileCompletionStatus(companyId);
+        const refreshed = await Company_1.default.findById(companyId).select('-password');
+        res.status(200).json({ message: 'Company profile updated successfully', company: refreshed });
     }
     catch (error) {
         console.error('Error updating company profile:', error);
@@ -222,13 +225,14 @@ const completeCompanyProfile = async (req, res) => {
             set.logo = logo;
         if (documents && Array.isArray(documents))
             set.documents = documents;
-        // Mark profile as complete (not pending review)
-        set.profileCompletionStatus = 'complete';
-        set.profileCompletedAt = new Date();
+        // Do NOT mark as complete here. Mark as pending_review if criteria met.
+        // Admin approval will mark it as complete later.
         const company = await Company_1.default.findByIdAndUpdate(companyId, { $set: set }, { new: true, runValidators: true }).select('-password');
         if (!company)
             return res.status(404).json({ message: 'Company not found' });
-        res.status(200).json({ message: 'Company profile completed and submitted for review', company });
+        await recomputeProfileCompletionStatus(companyId);
+        const refreshed = await Company_1.default.findById(companyId).select('-password');
+        res.status(200).json({ message: 'Company profile submitted for review', company: refreshed });
     }
     catch (error) {
         console.error('Error completing company profile:', error);
@@ -606,7 +610,9 @@ const uploadDocuments = async (req, res) => {
         if (!company) {
             return res.status(404).json({ message: 'Company not found' });
         }
-        res.status(200).json({ message: 'Documents uploaded successfully', company });
+        await recomputeProfileCompletionStatus(companyId);
+        const refreshed = await Company_1.default.findById(companyId).select('-password');
+        res.status(200).json({ message: 'Documents uploaded successfully', company: refreshed });
     }
     catch (error) {
         console.error('Error uploading documents:', error);
@@ -660,7 +666,9 @@ const updateDocuments = async (req, res) => {
         if (!company) {
             return res.status(404).json({ message: 'Company not found' });
         }
-        res.status(200).json({ message: 'Documents updated successfully', company });
+        await recomputeProfileCompletionStatus(companyId);
+        const refreshed = await Company_1.default.findById(companyId).select('-password');
+        res.status(200).json({ message: 'Documents updated successfully', company: refreshed });
     }
     catch (error) {
         console.error('Error updating documents:', error);
@@ -712,7 +720,9 @@ const deleteDocument = async (req, res) => {
         }
         company.documents.splice(documentIndex, 1);
         await company.save();
-        res.status(200).json({ message: 'Document deleted successfully', company });
+        await recomputeProfileCompletionStatus(companyId);
+        const refreshed = await Company_1.default.findById(companyId).select('-password');
+        res.status(200).json({ message: 'Document deleted successfully', company: refreshed });
     }
     catch (error) {
         console.error('Error deleting document:', error);
@@ -720,3 +730,33 @@ const deleteDocument = async (req, res) => {
     }
 };
 exports.deleteDocument = deleteDocument;
+// Determine if a company's profile has enough info to be submitted for review
+const isProfileReadyForReview = (about, documents) => {
+    const hasAbout = typeof about === 'string' && about.trim().length > 0;
+    const hasDocs = Array.isArray(documents) && documents.length > 0;
+    return hasAbout && hasDocs;
+};
+// Recompute and persist the company's profileCompletionStatus based on current data
+const recomputeProfileCompletionStatus = async (companyId) => {
+    const company = await Company_1.default.findById(companyId).select('about documents isApproved status profileCompletionStatus');
+    if (!company)
+        return null;
+    let nextStatus = 'incomplete';
+    // If already approved and active, mark as complete
+    if (company.isApproved && company.status === 'approved') {
+        nextStatus = 'complete';
+    }
+    else if (isProfileReadyForReview(company.about, company.documents)) {
+        nextStatus = 'pending_review';
+    }
+    if (company.profileCompletionStatus !== nextStatus) {
+        await Company_1.default.findByIdAndUpdate(companyId, {
+            $set: {
+                profileCompletionStatus: nextStatus,
+                // Only set completedAt when truly complete (admin approved)
+                ...(nextStatus === 'complete' ? { profileCompletedAt: new Date() } : {})
+            }
+        });
+    }
+    return nextStatus;
+};

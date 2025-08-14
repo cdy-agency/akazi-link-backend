@@ -166,7 +166,11 @@ try {
     return res.status(404).json({ message: 'Company not found' });
   }
 
-  res.status(200).json({ message: 'Company profile updated successfully', company });
+  // Recompute profile completion state if relevant fields changed (e.g., about)
+  await recomputeProfileCompletionStatus(companyId);
+  const refreshed = await Company.findById(companyId).select('-password');
+
+  res.status(200).json({ message: 'Company profile updated successfully', company: refreshed });
 } catch (error) {
   console.error('Error updating company profile:', error);
   res.status(500).json({ message: 'Server error' });
@@ -197,9 +201,8 @@ export const completeCompanyProfile = async (req: Request, res: Response) => {
     if (logo) set.logo = logo;
     if (documents && Array.isArray(documents)) set.documents = documents;
     
-    // Mark profile as complete (not pending review)
-    set.profileCompletionStatus = 'complete';
-    set.profileCompletedAt = new Date();
+    // Do NOT mark as complete here. Mark as pending_review if criteria met.
+    // Admin approval will mark it as complete later.
 
     const company = await Company.findByIdAndUpdate(
       companyId,
@@ -209,7 +212,10 @@ export const completeCompanyProfile = async (req: Request, res: Response) => {
 
     if (!company) return res.status(404).json({ message: 'Company not found' });
 
-    res.status(200).json({ message: 'Company profile completed and submitted for review', company });
+    await recomputeProfileCompletionStatus(companyId);
+    const refreshed = await Company.findById(companyId).select('-password');
+
+    res.status(200).json({ message: 'Company profile submitted for review', company: refreshed });
   } catch (error) {
     console.error('Error completing company profile:', error);
     res.status(500).json({ message: 'Server error' });
@@ -608,7 +614,10 @@ export const uploadDocuments = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Company not found' });
     }
 
-    res.status(200).json({ message: 'Documents uploaded successfully', company });
+    await recomputeProfileCompletionStatus(companyId);
+    const refreshed = await Company.findById(companyId).select('-password');
+
+    res.status(200).json({ message: 'Documents uploaded successfully', company: refreshed });
   } catch (error) {
     console.error('Error uploading documents:', error);
     res.status(500).json({ message: 'Server error' });
@@ -677,7 +686,10 @@ export const updateDocuments = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Company not found' });
     }
 
-    res.status(200).json({ message: 'Documents updated successfully', company });
+    await recomputeProfileCompletionStatus(companyId);
+    const refreshed = await Company.findById(companyId).select('-password');
+
+    res.status(200).json({ message: 'Documents updated successfully', company: refreshed });
   } catch (error) {
     console.error('Error updating documents:', error);
     res.status(500).json({ message: 'Server error' });
@@ -740,9 +752,46 @@ export const deleteDocument = async (req: Request, res: Response) => {
     company.documents.splice(documentIndex, 1);
     await company.save();
 
-    res.status(200).json({ message: 'Document deleted successfully', company });
+    await recomputeProfileCompletionStatus(companyId);
+    const refreshed = await Company.findById(companyId).select('-password');
+
+    res.status(200).json({ message: 'Document deleted successfully', company: refreshed });
   } catch (error) {
     console.error('Error deleting document:', error);
     res.status(500).json({ message: 'Server error' });
   }
+};
+
+// Determine if a company's profile has enough info to be submitted for review
+const isProfileReadyForReview = (about?: string, documents?: IFileInfo[] | null) => {
+  const hasAbout = typeof about === 'string' && about.trim().length > 0;
+  const hasDocs = Array.isArray(documents) && documents.length > 0;
+  return hasAbout && hasDocs;
+};
+
+// Recompute and persist the company's profileCompletionStatus based on current data
+const recomputeProfileCompletionStatus = async (companyId: string) => {
+  const company = await Company.findById(companyId).select('about documents isApproved status profileCompletionStatus');
+  if (!company) return null;
+
+  let nextStatus: 'incomplete' | 'pending_review' | 'complete' = 'incomplete';
+
+  // If already approved and active, mark as complete
+  if (company.isApproved && company.status === 'approved') {
+    nextStatus = 'complete';
+  } else if (isProfileReadyForReview(company.about as any, company.documents as any)) {
+    nextStatus = 'pending_review';
+  }
+
+  if (company.profileCompletionStatus !== nextStatus) {
+    await Company.findByIdAndUpdate(companyId, {
+      $set: {
+        profileCompletionStatus: nextStatus,
+        // Only set completedAt when truly complete (admin approved)
+        ...(nextStatus === 'complete' ? { profileCompletedAt: new Date() } : {})
+      }
+    });
+  }
+
+  return nextStatus;
 };

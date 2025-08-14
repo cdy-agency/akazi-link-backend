@@ -294,7 +294,9 @@ const approveCompany = async (req, res) => {
         const company = await Company_1.default.findByIdAndUpdate(id, {
             isApproved: true,
             status: 'approved',
-            isActive: true
+            isActive: true,
+            profileCompletionStatus: 'complete',
+            profileCompletedAt: new Date()
         }, { new: true }).select('-password');
         console.log('Company found:', company);
         if (!company) {
@@ -375,7 +377,8 @@ const rejectCompany = async (req, res) => {
             status: 'rejected',
             isActive: false,
             rejectionReason,
-            rejectedAt: new Date()
+            rejectedAt: new Date(),
+            profileCompletionStatus: 'incomplete'
         }, { new: true }).select('-password');
         if (!company) {
             return res.status(404).json({ message: 'Company not found' });
@@ -499,7 +502,8 @@ const enableCompany = async (req, res) => {
         const updatedCompany = await Company_1.default.findByIdAndUpdate(id, {
             isActive: true,
             status: company.isApproved ? 'approved' : 'pending',
-            disabledAt: undefined
+            disabledAt: undefined,
+            ...(company.isApproved ? { profileCompletionStatus: 'complete' } : {})
         }, { new: true }).select('-password');
         if (!updatedCompany) {
             return res.status(404).json({ message: 'Company not found' });
