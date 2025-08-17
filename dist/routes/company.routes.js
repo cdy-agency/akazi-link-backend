@@ -248,9 +248,8 @@ router.get('/applicants/:jobId', (0, authMiddleware_1.authorizeCompany)({ requir
 // Update application status
 router.patch('/applications/:applicationId/status', (0, authMiddleware_1.authorizeCompany)({ requireApproval: true }), company_controller_1.updateApplicationStatus);
 // Browse employees and send work requests
-const company_controller_2 = require("../controllers/company.controller");
-router.get('/employees', (0, authMiddleware_1.authorizeCompany)({ requireApproval: true }), company_controller_2.browseEmployees);
-router.post('/work-requests', (0, authMiddleware_1.authorizeCompany)({ requireApproval: true }), company_controller_2.sendWorkRequest);
+router.get('/employees', (0, authMiddleware_1.authorizeCompany)({ requireApproval: true }), company_controller_1.browseEmployees);
+router.post('/work-requests', (0, authMiddleware_1.authorizeCompany)({ requireApproval: true }), company_controller_1.sendWorkRequest);
 // File upload endpoints
 router.post('/upload/logo', (0, authMiddleware_1.authorizeCompany)({ requireApproval: false }), (0, rod_fileupload_1.default)('logo', cloudinary_1.default), company_controller_1.uploadLogo);
 router.post('/upload/documents', (0, authMiddleware_1.authorizeCompany)({ requireApproval: false }), (0, rod_fileupload_1.uploadMultiple)('documents', cloudinary_1.default), company_controller_1.uploadDocuments);
@@ -258,4 +257,8 @@ router.patch('/update/logo', (0, authMiddleware_1.authorizeCompany)({ requireApp
 router.patch('/update/documents', (0, authMiddleware_1.authorizeCompany)({ requireApproval: false }), (0, rod_fileupload_1.uploadMultiple)('documents', cloudinary_1.default), company_controller_1.updateDocuments);
 router.delete('/delete/logo', (0, authMiddleware_1.authorizeCompany)({ requireApproval: false }), company_controller_1.deleteLogo);
 router.delete('/delete/document/:index', (0, authMiddleware_1.authorizeCompany)({ requireApproval: false }), company_controller_1.deleteDocument);
+// Company notifications
+router.get('/notifications', (0, authMiddleware_1.authorizeCompany)({ requireApproval: false }), company_controller_1.getCompanyNotifications);
+router.patch('/notifications/:notificationId/read', (0, authMiddleware_1.authorizeCompany)({ requireApproval: false }), company_controller_1.markCompanyNotificationRead);
+router.delete('/notifications/:notificationId', (0, authMiddleware_1.authorizeCompany)({ requireApproval: false }), company_controller_1.deleteCompanyNotification);
 exports.default = router;

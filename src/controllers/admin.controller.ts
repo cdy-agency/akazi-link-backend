@@ -167,34 +167,7 @@ try {
 }
 };
 
-/**
-* @swagger
-* /api/admin/employees:
-*   get:
-*     summary: Get all registered employees
-*     tags: [Admin]
-*     security:
-*       - bearerAuth: []
-*     responses:
-*       200:
-*         description: Employees retrieved successfully
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Employees retrieved successfully
-*                 employees:
-*                   type: array
-*                   items:
-*                     $ref: '#/components/schemas/Employee'
-*       403:
-*         description: Access Denied
-*       500:
-*         description: Server error
-*/
+
 export const getEmployees = async (req: Request, res: Response) => {
 try {
   const employees = await Employee.find().select('-password'); // Exclude passwords
@@ -243,44 +216,6 @@ try {
 }
 };
 
-/**
-* @swagger
-* /api/admin/company/{id}/approve:
-*   patch:
-*     summary: Approve a company
-*     tags: [Admin]
-*     security:
-*       - bearerAuth: []
-*     parameters:
-*       - in: path
-*         name: id
-*         required: true
-*         schema:
-*           type: string
-*           format: mongo-id
-*         description: ID of the company to approve
-*     responses:
-*       200:
-*         description: Company approved successfully
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Company approved successfully
-*                 company:
-*                   $ref: '#/components/schemas/Company'
-*       400:
-*         description: Invalid Company ID
-*       403:
-*         description: Access Denied
-*       404:
-*         description: Company not found
-*       500:
-*         description: Server error
-*/
 export const approveCompany = async (req: Request, res: Response) => {
 try {
   const { id } = req.params;
@@ -707,6 +642,70 @@ export const getCompaniesPendingReview = async (req: Request, res: Response) => 
 };
 
 /**
+ * @swagger
+ * /api/admin/company/{id}:
+ *   get:
+ *     summary: Get full company details for review
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: mongo-id
+ *         description: ID of the company to review
+ *     responses:
+ *       200:
+ *         description: Company details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Company details retrieved successfully
+ *                 company:
+ *                   $ref: '#/components/schemas/Company'
+ *       400:
+ *         description: Invalid Company ID
+ *       403:
+ *         description: Access Denied
+ *       404:
+ *         description: Company not found
+ *       500:
+ *         description: Server error
+ */
+export const getCompanyDetailsForReview = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid Company ID' });
+    }
+
+    const company = await Company.findById(id).select('-password');
+    if (!company) {
+      return res.status(404).json({ message: 'Company not found' });
+    }
+
+    // Optionally ensure it's in pending_review stage
+    // If you want to strictly restrict to pending review, uncomment below:
+    // if (company.profileCompletionStatus !== 'pending_review') {
+    //   return res.status(400).json({ message: 'Company is not in pending review state' });
+    // }
+
+    res.status(200).json({ message: 'Company details retrieved successfully', company });
+  } catch (error) {
+    console.error('Error retrieving company details for review:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
  * Approve a company's completed profile
  */
 export const approveCompanyProfile = async (req: Request, res: Response) => {
@@ -792,6 +791,80 @@ export const rejectCompanyProfile = async (req: Request, res: Response) => {
     res.status(200).json({ message: 'Company profile rejected successfully', company });
   } catch (error) {
     console.error('Error rejecting company profile:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Get admin notifications
+ */
+export const getAdminNotifications = async (req: Request, res: Response) => {
+  try {
+    // For admin, we can aggregate notifications from various sources
+    // For now, let's create some system notifications
+    const notifications = [
+      {
+        _id: '1',
+        message: 'New company registration pending review',
+        read: false,
+        createdAt: new Date(),
+        type: 'system'
+      },
+      {
+        _id: '2', 
+        message: 'New employee registered',
+        read: false,
+        createdAt: new Date(),
+        type: 'system'
+      }
+    ];
+
+    res.status(200).json({ 
+      message: 'Admin notifications retrieved successfully', 
+      notifications 
+    });
+  } catch (error) {
+    console.error('Error getting admin notifications:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Mark admin notification as read
+ */
+export const markAdminNotificationRead = async (req: Request, res: Response) => {
+  try {
+    const { notificationId } = req.params;
+
+    if (!notificationId) {
+      return res.status(400).json({ message: 'Notification ID is required' });
+    }
+
+    // In a real implementation, you would update the notification in the database
+    // For now, we'll just return success
+    res.status(200).json({ message: 'Notification marked as read' });
+  } catch (error) {
+    console.error('Error marking admin notification as read:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Delete admin notification
+ */
+export const deleteAdminNotification = async (req: Request, res: Response) => {
+  try {
+    const { notificationId } = req.params;
+
+    if (!notificationId) {
+      return res.status(400).json({ message: 'Notification ID is required' });
+    }
+
+    // In a real implementation, you would delete the notification from the database
+    // For now, we'll just return success
+    res.status(200).json({ message: 'Notification deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting admin notification:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

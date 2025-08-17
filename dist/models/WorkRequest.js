@@ -45,7 +45,8 @@ const WorkRequestSchema = new mongoose_1.Schema({
                 message: { type: String, required: true },
                 read: { type: Boolean, default: false },
                 createdAt: { type: Date, default: Date.now },
-            }, { _id: false }),
+            }, { _id: true } // Enable _id for subdocuments so they can be identified and deleted
+            ),
         ],
         default: [],
     },

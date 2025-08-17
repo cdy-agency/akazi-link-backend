@@ -1,18 +1,23 @@
 import { Router } from 'express';
 import {
-getProfile,
-postJob,
-getCompanyJobs,
-getApplicantsForJob,
-updateProfile,
-completeCompanyProfile,
-updateApplicationStatus,
-uploadLogo,
-uploadDocuments,
-updateLogo,
-updateDocuments,
-deleteLogo,
-deleteDocument,
+  getProfile,
+  updateProfile,
+  completeCompanyProfile,
+  postJob,
+  getCompanyJobs,
+  getApplicantsForJob,
+  updateApplicationStatus,
+  uploadLogo,
+  uploadDocuments,
+  updateLogo,
+  updateDocuments,
+  deleteLogo,
+  deleteDocument,
+  browseEmployees,
+  sendWorkRequest,
+  getCompanyNotifications,
+  markCompanyNotificationRead,
+  deleteCompanyNotification,
 } from '../controllers/company.controller';
 import { authenticateToken, authorizeRoles, authorizeCompany } from '../middlewares/authMiddleware';
 import uploadSingle, { uploadMultiple } from "rod-fileupload"
@@ -233,7 +238,6 @@ router.get('/applicants/:jobId', authorizeCompany({ requireApproval: true }), ge
 router.patch('/applications/:applicationId/status', authorizeCompany({ requireApproval: true }), updateApplicationStatus);
 
 // Browse employees and send work requests
-import { browseEmployees, sendWorkRequest } from '../controllers/company.controller';
 router.get('/employees', authorizeCompany({ requireApproval: true }), browseEmployees);
 router.post('/work-requests', authorizeCompany({ requireApproval: true }), sendWorkRequest);
 
@@ -244,5 +248,10 @@ router.patch('/update/logo', authorizeCompany({ requireApproval: false }), uploa
 router.patch('/update/documents', authorizeCompany({ requireApproval: false }), uploadMultiple('documents', cloudinary), updateDocuments);
 router.delete('/delete/logo', authorizeCompany({ requireApproval: false }), deleteLogo);
 router.delete('/delete/document/:index', authorizeCompany({ requireApproval: false }), deleteDocument);
+
+// Company notifications
+router.get('/notifications', authorizeCompany({ requireApproval: false }), getCompanyNotifications);
+router.patch('/notifications/:notificationId/read', authorizeCompany({ requireApproval: false }), markCompanyNotificationRead);
+router.delete('/notifications/:notificationId', authorizeCompany({ requireApproval: false }), deleteCompanyNotification);
 
 export default router;

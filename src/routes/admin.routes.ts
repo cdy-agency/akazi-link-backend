@@ -11,9 +11,13 @@ enableCompany,
 deleteCompany,
   listAllUsers,
   getCompaniesPendingReview,
+  getCompanyDetailsForReview,
   approveCompanyProfile,
   rejectCompanyProfile,
   getAllEmployees,
+  getAdminNotifications,
+  markAdminNotificationRead,
+  deleteAdminNotification,
 } from '../controllers/admin.controller';
 import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware';
 import uploadSingle from 'rod-fileupload';
@@ -392,8 +396,14 @@ router.get('/users-all', listAllUsers);
 
 // Company profile review endpoints
 router.get('/companies/pending-review', getCompaniesPendingReview);
+router.get('/company/:id', getCompanyDetailsForReview);
 router.patch('/company/:id/approve-profile', approveCompanyProfile);
 router.patch('/company/:id/reject-profile', rejectCompanyProfile);
 router.get('/employees', getAllEmployees);
+
+// Admin notifications
+router.get('/notifications', getAdminNotifications);
+router.patch('/notifications/:notificationId/read', markAdminNotificationRead);
+router.delete('/notifications/:notificationId', deleteAdminNotification);
 
 export default router;

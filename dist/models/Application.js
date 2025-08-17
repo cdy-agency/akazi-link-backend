@@ -34,15 +34,25 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
+const FileInfoSchema = new mongoose_1.Schema({
+    url: { type: String, required: true },
+    public_id: { type: String, required: true },
+    format: { type: String, required: true },
+    size: { type: Number, required: true },
+    name: { type: String, required: true },
+    type: { type: String, required: true },
+    time: { type: String, required: true }
+});
 const NotificationSchema = new mongoose_1.Schema({
     message: { type: String, required: true },
     read: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now },
-}, { _id: false } // Do not create _id for subdocuments
+}, { _id: true } // Enable _id for subdocuments so they can be identified and deleted
 );
 const ApplicationSchema = new mongoose_1.Schema({
     jobId: { type: mongoose_1.Types.ObjectId, ref: 'Job', required: true },
     employeeId: { type: mongoose_1.Types.ObjectId, ref: 'Employee', required: true },
+    resume: { type: String },
     skills: { type: [String], default: [] },
     experience: { type: String },
     appliedVia: {

@@ -6,41 +6,7 @@ import Application from '../models/Application';
 import { Types } from 'mongoose';
 import WorkRequest from '../models/WorkRequest';
 
-/**
-* @swagger
-* tags:
-*   name: Employee
-*   description: Employee specific operations
-*/
 
-/**
-* @swagger
-* /api/employee/profile:
-*   get:
-*     summary: Get employee profile
-*     tags: [Employee]
-*     security:
-*       - bearerAuth: []
-*     responses:
-*       200:
-*         description: Employee profile retrieved successfully
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Employee profile retrieved successfully
-*                 employee:
-*                   $ref: '#/components/schemas/Employee'
-*       403:
-*         description: Access Denied
-*       404:
-*         description: Employee not found
-*       500:
-*         description: Server error
-*/
 export const getProfile = async (req: Request, res: Response) => {
 try {
   const employeeId = req.user?.id;
@@ -60,40 +26,6 @@ try {
 }
 };
 
-/**
- * @swagger
- * /api/employee/profile:
- *   patch:
- *     summary: Update employee profile
- *     tags: [Employee]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *               dateOfBirth:
- *                 type: string
- *                 format: date
- *               phoneNumber:
- *                 type: string
- *     responses:
- *       200:
- *         description: Employee profile updated successfully
- *       400:
- *         description: Bad request
- *       403:
- *         description: Access Denied
- *       404:
- *         description: Employee not found
- *       500:
- *         description: Server error
- */
 export const updateEmployeeProfile = async (req: Request, res: Response) => {
   try {
     const employeeId = req.user?.id;
@@ -134,40 +66,7 @@ export const updateEmployeeProfile = async (req: Request, res: Response) => {
   }
 };
 
-/**
-* @swagger
-* /api/employee/jobs:
-*   get:
-*     summary: List jobs by category
-*     tags: [Employee]
-*     security:
-*       - bearerAuth: []
-*     parameters:
-*       - in: query
-*         name: category
-*         schema:
-*           type: string
-*         description: Optional category to filter jobs
-*     responses:
-*       200:
-*         description: Jobs retrieved successfully
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Jobs retrieved successfully
-*                 jobs:
-*                   type: array
-*                   items:
-*                     $ref: '#/components/schemas/Job'
-*       403:
-*         description: Access Denied
-*       500:
-*         description: Server error
-*/
+
 export const getJobsByCategory = async (req: Request, res: Response) => {
 try {
   const { category } = req.query;
@@ -185,40 +84,7 @@ try {
 }
 };
 
-/**
-* @swagger
-* /api/employee/suggestions:
-*   get:
-*     summary: Suggest jobs by category (currently same as list jobs by category)
-*     tags: [Employee]
-*     security:
-*       - bearerAuth: []
-*     parameters:
-*       - in: query
-*         name: category
-*         schema:
-*           type: string
-*         description: Optional category to filter job suggestions
-*     responses:
-*       200:
-*         description: Job suggestions retrieved successfully
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Job suggestions retrieved successfully
-*                 jobs:
-*                   type: array
-*                   items:
-*                     $ref: '#/components/schemas/Job'
-*       403:
-*         description: Access Denied
-*       500:
-*         description: Server error
-*/
+
 export const getJobSuggestions = async (req: Request, res: Response) => {
 try {
   const employeeId = req.user?.id;
@@ -248,69 +114,7 @@ try {
 }
 };
 
-/**
-* @swagger
-* /api/employee/apply/{jobId}:
-*   post:
-*     summary: Apply for a job
-*     tags: [Employee]
-*     security:
-*       - bearerAuth: []
-*     parameters:
-*       - in: path
-*         name: jobId
-*         required: true
-*         schema:
-*           type: string
-*           format: mongo-id
-*         description: ID of the job to apply for
-*     requestBody:
-*       required: true
-*       content:
-*         application/json:
-*           schema:
-*             type: object
-*             properties:
-*               skills:
-*                 type: array
-*                 items:
-*                   type: string
-*                 example: ["JavaScript", "React", "Node.js"]
-*               experience:
-*                 type: string
-*                 example: "5 years in web development"
-*               appliedVia:
-*                 type: string
-*                 enum: [normal, whatsapp, referral]
-*                 example: normal
-*     responses:
-*       201:
-*         description: Application submitted successfully
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Application submitted successfully
-*                 application:
-*                   $ref: '#/components/schemas/Application'
-*       400:
-*         description: Bad request (e.g., job not found, already applied)
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Job not found or already applied
-*       403:
-*         description: Access Denied
-*       500:
-*         description: Server error
-*/
+
 export const applyForJob = async (req: Request, res: Response) => {
 try {
   const { jobId } = req.params;
@@ -340,6 +144,7 @@ try {
     employeeId,
     skills,
     experience,
+    
     appliedVia: appliedVia || 'normal',
     status: 'pending',
   });
@@ -351,34 +156,6 @@ try {
 }
 };
 
-/**
-* @swagger
-* /api/employee/applications:
-*   get:
-*     summary: Get all applications made by the employee
-*     tags: [Employee]
-*     security:
-*       - bearerAuth: []
-*     responses:
-*       200:
-*         description: Applications retrieved successfully
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Applications retrieved successfully
-*                 applications:
-*                   type: array
-*                   items:
-*                     $ref: '#/components/schemas/Application'
-*       403:
-*         description: Access Denied
-*       500:
-*         description: Server error
-*/
 export const getApplications = async (req: Request, res: Response) => {
 try {
   const employeeId = req.user?.id;
@@ -403,44 +180,6 @@ try {
 }
 };
 
-/**
-* @swagger
-* /api/employee/notifications:
-*   get:
-*     summary: Get employee notifications
-*     tags: [Employee]
-*     security:
-*       - bearerAuth: []
-*     responses:
-*       200:
-*         description: Notifications retrieved successfully
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Your application for "Software Engineer" has been reviewed.
-*                 notifications:
-*                   type: array
-*                   items:
-*                     type: object
-*                     properties:
-*                       message:
-*                         type: string
-*                         example: Your application for "Software Engineer" has been reviewed.
-*                       read:
-*                         type: boolean
-*                         example: false
-*                       createdAt:
-*                         type: string
-*                         format: date-time
-*       403:
-*         description: Access Denied
-*       500:
-*         description: Server error
-*/
 export const getNotifications = async (req: Request, res: Response) => {
 try {
   const employeeId = req.user?.id;
@@ -498,6 +237,86 @@ export const respondWorkRequest = async (req: Request, res: Response) => {
     res.status(200).json({ message: 'Response saved', request: wr });
   } catch (error) {
     console.error('Error responding to work request:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const markNotificationRead = async (req: Request, res: Response) => {
+  try {
+    const employeeId = req.user?.id;
+    const { notificationId } = req.params as { notificationId: string };
+    
+    if (!employeeId) {
+      return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
+    }
+
+    if (!Types.ObjectId.isValid(notificationId)) {
+      return res.status(400).json({ message: 'Invalid notification ID' });
+    }
+
+    // Find the application that contains this notification
+    const application = await Application.findOne({
+      employeeId,
+      'notifications._id': notificationId
+    });
+
+    if (!application) {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
+
+    // Mark the specific notification as read
+    await Application.updateOne(
+      { 
+        employeeId, 
+        'notifications._id': notificationId 
+      },
+      { 
+        $set: { 
+          'notifications.$.read': true 
+        } 
+      }
+    );
+
+    res.status(200).json({ message: 'Notification marked as read' });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const deleteEmployeeNotification = async (req: Request, res: Response) => {
+  try {
+    const employeeId = req.user?.id;
+    const { notificationId } = req.params as { notificationId: string };
+    
+    if (!employeeId) {
+      return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
+    }
+
+    if (!Types.ObjectId.isValid(notificationId)) {
+      return res.status(400).json({ message: 'Invalid notification ID' });
+    }
+
+    // Find and delete the notification from the application
+    const result = await Application.updateOne(
+      { 
+        employeeId, 
+        'notifications._id': notificationId 
+      },
+      { 
+        $pull: { 
+          notifications: { _id: notificationId } 
+        } 
+      }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
+
+    res.status(200).json({ message: 'Notification deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting notification:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

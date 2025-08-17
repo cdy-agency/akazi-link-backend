@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteDocument = exports.deleteLogo = exports.updateDocuments = exports.updateLogo = exports.uploadDocuments = exports.uploadLogo = exports.sendWorkRequest = exports.browseEmployees = exports.updateApplicationStatus = exports.getApplicantsForJob = exports.getCompanyJobs = exports.postJob = exports.completeCompanyProfile = exports.updateProfile = exports.getProfile = void 0;
+exports.deleteCompanyNotification = exports.markCompanyNotificationRead = exports.getCompanyNotifications = exports.deleteDocument = exports.deleteLogo = exports.updateDocuments = exports.updateLogo = exports.uploadDocuments = exports.uploadLogo = exports.sendWorkRequest = exports.browseEmployees = exports.updateApplicationStatus = exports.getApplicantsForJob = exports.getCompanyJobs = exports.postJob = exports.completeCompanyProfile = exports.updateProfile = exports.getProfile = void 0;
 const Company_1 = __importDefault(require("../models/Company"));
 const Job_1 = __importDefault(require("../models/Job"));
 const Application_1 = __importDefault(require("../models/Application"));
@@ -44,126 +44,141 @@ const mongoose_1 = require("mongoose");
 const WorkRequest_1 = __importDefault(require("../models/WorkRequest"));
 const authUtils_1 = require("../utils/authUtils");
 /**
-* @swagger
-* tags:
-*   name: Company
-*   description: Company specific operations
-*/
+ * @swagger
+ * tags:
+ *   name: Company
+ *   description: Company specific operations
+ */
 /**
-* @swagger
-* /api/company/profile:
-*   get:
-*     summary: Get company profile
-*     tags: [Company]
-*     security:
-*       - bearerAuth: []
-*     responses:
-*       200:
-*         description: Company profile retrieved successfully
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Company profile retrieved successfully
-*                 company:
-*                   $ref: '#/components/schemas/Company'
-*       403:
-*         description: Access Denied
-*       404:
-*         description: Company not found
-*       500:
-*         description: Server error
-*/
+ * @swagger
+ * /api/company/profile:
+ *   get:
+ *     summary: Get company profile
+ *     tags: [Company]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Company profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Company profile retrieved successfully
+ *                 company:
+ *                   $ref: '#/components/schemas/Company'
+ *       403:
+ *         description: Access Denied
+ *       404:
+ *         description: Company not found
+ *       500:
+ *         description: Server error
+ */
 const getProfile = async (req, res) => {
     try {
         const companyId = req.user?.id;
         if (!companyId) {
-            return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+            return res
+                .status(403)
+                .json({ message: "Access Denied: Company ID not found in token" });
         }
-        const company = await Company_1.default.findById(companyId).select('-password'); // Exclude password
+        const company = await Company_1.default.findById(companyId).select("-password"); // Exclude password
         if (!company) {
-            return res.status(404).json({ message: 'Company not found' });
+            return res.status(404).json({ message: "Company not found" });
         }
         // Provide a status notice for frontend popup/banner
         let statusNotice;
-        if (company.status === 'approved' && company.profileCompletionStatus === 'complete') {
-            statusNotice = 'Your company is approved. You can now post jobs.';
+        if (company.status === "approved" &&
+            company.profileCompletionStatus === "complete") {
+            statusNotice = "Your company is approved. You can now post jobs.";
         }
-        else if (company.profileCompletionStatus === 'complete' && company.status === 'pending') {
-            statusNotice = 'Congratulations! You have completed your profile. Please wait for admin approval.';
+        else if (company.profileCompletionStatus === "complete" &&
+            company.status === "pending") {
+            statusNotice =
+                "Congratulations! You have completed your profile. Please wait for admin approval.";
         }
-        else if (company.profileCompletionStatus === 'pending_review') {
-            statusNotice = 'Your profile has been submitted and is pending admin review.';
+        else if (company.profileCompletionStatus === "pending_review") {
+            statusNotice =
+                "Your profile has been submitted and is pending admin review.";
         }
-        else if (company.profileCompletionStatus === 'incomplete') {
-            statusNotice = 'Complete your profile to unlock job posting and other features.';
+        else if (company.profileCompletionStatus === "incomplete") {
+            statusNotice =
+                "Complete your profile to unlock job posting and other features.";
         }
-        res.status(200).json({ message: 'Company profile retrieved successfully', company, statusNotice });
+        res
+            .status(200)
+            .json({
+            message: "Company profile retrieved successfully",
+            company,
+            statusNotice,
+        });
     }
     catch (error) {
-        console.error('Error getting company profile:', error);
-        res.status(500).json({ message: 'Server error' });
+        console.error("Error getting company profile:", error);
+        res.status(500).json({ message: "Server error" });
     }
 };
 exports.getProfile = getProfile;
 /**
-* @swagger
-* /api/company/profile:
-*   patch:
-*     summary: Update company profile
-*     tags: [Company]
-*     security:
-*       - bearerAuth: []
-*     requestBody:
-*       required: true
-*       content:
-*         application/json:
-*           schema:
-*             type: object
-*             properties:
-*               companyName:
-*                 type: string
-*                 example: Tech Solutions Inc. (Updated)
-*               location:
-*                 type: string
-*                 example: San Francisco, USA
-*               phoneNumber:
-*                 type: string
-*                 example: "+1122334455"
-*               website:
-*                 type: string
-*                 example: https://www.techsolutions-updated.com
-*               logo:
-*                 type: string
-*                 example: https://example.com/new_logo.png
-*     responses:
-*       200:
-*         description: Company profile updated successfully
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Company profile updated successfully
-*                 company:
-*                   $ref: '#/components/schemas/Company'
-*       403:
-*         description: Access Denied
-*       404:
-*         description: Company not found
-*       500:
-*         description: Server error
-*/
+ * @swagger
+ * /api/company/profile:
+ *   patch:
+ *     summary: Update company profile
+ *     tags: [Company]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               companyName:
+ *                 type: string
+ *                 example: Tech Solutions Inc. (Updated)
+ *               location:
+ *                 type: string
+ *                 example: San Francisco, USA
+ *               phoneNumber:
+ *                 type: string
+ *                 example: "+1122334455"
+ *               website:
+ *                 type: string
+ *                 example: https://www.techsolutions-updated.com
+ *               logo:
+ *                 type: string
+ *                 example: https://example.com/new_logo.png
+ *     responses:
+ *       200:
+ *         description: Company profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Company profile updated successfully
+ *                 company:
+ *                   $ref: '#/components/schemas/Company'
+ *       403:
+ *         description: Access Denied
+ *       404:
+ *         description: Company not found
+ *       500:
+ *         description: Server error
+ */
 const updateProfile = async (req, res) => {
     try {
         const companyId = req.user?.id;
         if (!companyId) {
-            return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+            return res
+                .status(403)
+                .json({ message: "Access Denied: Company ID not found in token" });
         }
         const { oldPassword, newPassword, logo, documents, ...updates } = req.body;
         // Prevent updating sensitive fields like email, role, isApproved via this endpoint
@@ -176,30 +191,39 @@ const updateProfile = async (req, res) => {
         // Handle password change if new password is provided
         if (newPassword) {
             if (!oldPassword) {
-                return res.status(400).json({ message: 'Old password is required when setting a new password' });
+                return res
+                    .status(400)
+                    .json({
+                    message: "Old password is required when setting a new password",
+                });
             }
             const company = await Company_1.default.findById(companyId);
             if (!company) {
-                return res.status(404).json({ message: 'Company not found' });
+                return res.status(404).json({ message: "Company not found" });
             }
             const isMatch = await (0, authUtils_1.comparePasswords)(oldPassword, company.password);
             if (!isMatch) {
-                return res.status(400).json({ message: 'Invalid old password' });
+                return res.status(400).json({ message: "Invalid old password" });
             }
             updates.password = await (0, authUtils_1.hashPassword)(newPassword);
         }
-        const company = await Company_1.default.findByIdAndUpdate(companyId, { $set: updates }, { new: true, runValidators: true }).select('-password');
+        const company = await Company_1.default.findByIdAndUpdate(companyId, { $set: updates }, { new: true, runValidators: true }).select("-password");
         if (!company) {
-            return res.status(404).json({ message: 'Company not found' });
+            return res.status(404).json({ message: "Company not found" });
         }
         // Recompute profile completion state if relevant fields changed (e.g., about)
         await recomputeProfileCompletionStatus(companyId);
-        const refreshed = await Company_1.default.findById(companyId).select('-password');
-        res.status(200).json({ message: 'Company profile updated successfully', company: refreshed });
+        const refreshed = await Company_1.default.findById(companyId).select("-password");
+        res
+            .status(200)
+            .json({
+            message: "Company profile updated successfully",
+            company: refreshed,
+        });
     }
     catch (error) {
-        console.error('Error updating company profile:', error);
-        res.status(500).json({ message: 'Server error' });
+        console.error("Error updating company profile:", error);
+        res.status(500).json({ message: "Server error" });
     }
 };
 exports.updateProfile = updateProfile;
@@ -211,15 +235,21 @@ const completeCompanyProfile = async (req, res) => {
     try {
         const companyId = req.user?.id;
         if (!companyId) {
-            return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+            return res
+                .status(403)
+                .json({ message: "Access Denied: Company ID not found in token" });
         }
         const bodyAny = req.body;
-        const about = typeof bodyAny.about === 'string' ? bodyAny.about : undefined;
+        const about = typeof bodyAny.about === "string" ? bodyAny.about : undefined;
         const logo = bodyAny.logo;
         const rawDocs = bodyAny.documents;
-        const documents = Array.isArray(rawDocs) ? rawDocs : rawDocs ? [rawDocs] : undefined;
+        const documents = Array.isArray(rawDocs)
+            ? rawDocs
+            : rawDocs
+                ? [rawDocs]
+                : undefined;
         const set = {};
-        if (typeof about === 'string')
+        if (typeof about === "string")
             set.about = about;
         if (logo)
             set.logo = logo;
@@ -227,260 +257,204 @@ const completeCompanyProfile = async (req, res) => {
             set.documents = documents;
         // Do NOT mark as complete here. Mark as pending_review if criteria met.
         // Admin approval will mark it as complete later.
-        const company = await Company_1.default.findByIdAndUpdate(companyId, { $set: set }, { new: true, runValidators: true }).select('-password');
+        const company = await Company_1.default.findByIdAndUpdate(companyId, { $set: set }, { new: true, runValidators: true }).select("-password");
         if (!company)
-            return res.status(404).json({ message: 'Company not found' });
+            return res.status(404).json({ message: "Company not found" });
         await recomputeProfileCompletionStatus(companyId);
-        const refreshed = await Company_1.default.findById(companyId).select('-password');
-        res.status(200).json({ message: 'Company profile submitted for review', company: refreshed });
+        const refreshed = await Company_1.default.findById(companyId).select("-password");
+        res
+            .status(200)
+            .json({
+            message: "Company profile submitted for review",
+            company: refreshed,
+        });
     }
     catch (error) {
-        console.error('Error completing company profile:', error);
-        res.status(500).json({ message: 'Server error' });
+        console.error("Error completing company profile:", error);
+        res.status(500).json({ message: "Server error" });
     }
 };
 exports.completeCompanyProfile = completeCompanyProfile;
 /**
-* @swagger
-* /api/company/job:
-*   post:
-*     summary: Post a new job
-*     tags: [Company]
-*     security:
-*       - bearerAuth: []
-*     requestBody:
-*       required: true
-*       content:
-*         application/json:
-*           schema:
-*             type: object
-*             required:
-*               - title
-*               - description
-*               - employmentType
-*               - category
-*             properties:
-*               title:
-*                 type: string
-*                 example: Software Engineer
-*               description:
-*                 type: string
-*                 example: We are looking for a skilled software engineer...
-*               skills:
-*                 type: array
-*                 items:
-*                   type: string
-*                 example: ["Node.js", "React", "MongoDB"]
-*               experience:
-*                 type: string
-*                 example: 3+ years
-*               employmentType:
-*                 type: string
-*                 enum: [fulltime, part-time, internship]
-*                 example: fulltime
-*               salary:
-*                 type: string
-*                 example: $80,000 - $120,000
-*               category:
-*                 type: string
-*                 example: IT & Software
-*     responses:
-*       201:
-*         description: Job posted successfully
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Job posted successfully
-*                 job:
-*                   $ref: '#/components/schemas/Job'
-*       400:
-*         description: Bad request (e.g., missing fields)
-*       403:
-*         description: Access Denied (e.g., company not approved)
-*       500:
-*         description: Server error
-*/
+ * @swagger
+ * /api/company/job:
+ *   post:
+ *     summary: Post a new job
+ *     tags: [Company]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - description
+ *               - employmentType
+ *               - category
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 example: Software Engineer
+ *               description:
+ *                 type: string
+ *                 example: We are looking for a skilled software engineer...
+ *               skills:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["Node.js", "React", "MongoDB"]
+ *               experience:
+ *                 type: string
+ *                 example: 3+ years
+ *               employmentType:
+ *                 type: string
+ *                 enum: [fulltime, part-time, internship]
+ *                 example: fulltime
+ *               salary:
+ *                 type: string
+ *                 example: $80,000 - $120,000
+ *               category:
+ *                 type: string
+ *                 example: IT & Software
+ *     responses:
+ *       201:
+ *         description: Job posted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Job posted successfully
+ *                 job:
+ *                   $ref: '#/components/schemas/Job'
+ *       400:
+ *         description: Bad request (e.g., missing fields)
+ *       403:
+ *         description: Access Denied (e.g., company not approved)
+ *       500:
+ *         description: Server error
+ */
 const postJob = async (req, res) => {
     try {
         const companyId = req.user?.id;
         if (!companyId) {
-            return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+            return res
+                .status(403)
+                .json({ message: "Access Denied: Company ID not found in token" });
         }
-        const { title, description, image, skills, experience, employmentType, salary, category, benefits } = req.body;
+        const { title, description, image, skills, experience, location, salaryMin, salaryMax, employmentType, applicationDeadline, category, benefits, responsibilities, } = req.body;
         if (!title || !description || !employmentType || !category) {
-            return res.status(400).json({ message: 'Please provide title, description, employment type, and category' });
+            return res
+                .status(400)
+                .json({
+                message: "Please provide title, description, employment type, and category",
+            });
         }
         const job = await Job_1.default.create({
             title,
             description,
+            location,
             skills,
-            image: image.url,
+            ...(image && typeof image === "object" ? { image } : {}),
             experience,
             employmentType,
-            salary,
+            salaryMin,
+            salaryMax,
             category,
             benefits: Array.isArray(benefits) ? benefits : [],
+            responsibilities: Array.isArray(responsibilities) ? responsibilities : [],
+            applicationDeadline,
             companyId,
         });
         console.log("created Job is:", job);
-        res.status(201).json({ message: 'Job posted successfully', job });
+        res.status(201).json({ message: "Job posted successfully", job });
     }
     catch (error) {
-        console.error('Error posting job:', error);
-        res.status(500).json({ message: 'Server error', error });
+        console.error("Error posting job:", error);
+        res.status(500).json({ message: "Server error", error });
     }
 };
 exports.postJob = postJob;
 /**
-* @swagger
-* /api/company/jobs:
-*   get:
-*     summary: Get all jobs posted by the company
-*     tags: [Company]
-*     security:
-*       - bearerAuth: []
-*     responses:
-*       200:
-*         description: Jobs retrieved successfully
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Jobs retrieved successfully
-*                 jobs:
-*                   type: array
-*                   items:
-*                     $ref: '#/components/schemas/Job'
-*       403:
-*         description: Access Denied
-*       500:
-*         description: Server error
-*/
+ * @swagger
+ * /api/company/jobs:
+ *   get:
+ *     summary: Get all jobs posted by the company
+ *     tags: [Company]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Jobs retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Jobs retrieved successfully
+ *                 jobs:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Job'
+ *       403:
+ *         description: Access Denied
+ *       500:
+ *         description: Server error
+ */
 const getCompanyJobs = async (req, res) => {
     try {
         const companyId = req.user?.id;
         if (!companyId) {
-            return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+            return res
+                .status(403)
+                .json({ message: "Access Denied: Company ID not found in token" });
         }
         const jobs = await Job_1.default.find({ companyId });
-        res.status(200).json({ message: 'Jobs retrieved successfully', jobs });
+        res.status(200).json({ message: "Jobs retrieved successfully", jobs });
     }
     catch (error) {
-        console.error('Error getting company jobs:', error);
-        res.status(500).json({ message: 'Server error' });
+        console.error("Error getting company jobs:", error);
+        res.status(500).json({ message: "Server error" });
     }
 };
 exports.getCompanyJobs = getCompanyJobs;
-/**
-* @swagger
-* /api/company/applicants/{jobId}:
-*   get:
-*     summary: Get applicants for a specific job posted by the company
-*     tags: [Company]
-*     security:
-*       - bearerAuth: []
-*     parameters:
-*       - in: path
-*         name: jobId
-*         required: true
-*         schema:
-*           type: string
-*           format: mongo-id
-*         description: ID of the job to get applicants for
-*     responses:
-*       200:
-*         description: Applicants retrieved successfully
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Applicants retrieved successfully
-*                 applicants:
-*                   type: array
-*                   items:
-*                     type: object
-*                     properties:
-*                       _id:
-*                         type: string
-*                         example: 60d5ec49f8c7d00015f8e3b1
-*                       jobId:
-*                         type: string
-*                         example: 60d5ec49f8c7d00015f8e3b0
-*                       employeeId:
-*                         type: object
-*                         properties:
-*                           _id:
-*                             type: string
-*                             example: 60d5ec49f8c7d00015f8e3b2
-*                           name:
-*                             type: string
-*                             example: Jane Doe
-*                           email:
-*                             type: string
-*                             example: jane.doe@example.com
-*                           phoneNumber:
-*                             type: string
-*                             example: "+1123456789"
-*                       skills:
-*                         type: array
-*                         items:
-*                           type: string
-*                         example: ["Python", "Data Analysis"]
-*                       experience:
-*                         type: string
-*                         example: 2 years in data science
-*                       appliedVia:
-*                         type: string
-*                         example: normal
-*                       status:
-*                         type: string
-*                         example: pending
-*                       createdAt:
-*                         type: string
-*                         format: date-time
-*       400:
-*         description: Invalid Job ID
-*       403:
-*         description: Access Denied (e.g., job not owned by company)
-*       404:
-*         description: Job not found
-*       500:
-*         description: Server error
-*/
 const getApplicantsForJob = async (req, res) => {
     try {
         const { jobId } = req.params;
         const companyId = req.user?.id;
         if (!companyId) {
-            return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+            return res
+                .status(403)
+                .json({ message: "Access Denied: Company ID not found in token" });
         }
         if (!mongoose_1.Types.ObjectId.isValid(jobId)) {
-            return res.status(400).json({ message: 'Invalid Job ID' });
+            return res.status(400).json({ message: "Invalid Job ID" });
         }
         const job = await Job_1.default.findById(jobId);
         if (!job) {
-            return res.status(404).json({ message: 'Job not found' });
+            return res.status(404).json({ message: "Job not found" });
         }
         // Ensure the job belongs to the requesting company
         if (job.companyId.toString() !== companyId) {
-            return res.status(403).json({ message: 'Access Denied: You do not own this job' });
+            return res
+                .status(403)
+                .json({ message: "Access Denied: You do not own this job" });
         }
-        const applicants = await Application_1.default.find({ jobId }).populate('employeeId', 'name email phoneNumber'); // Populate employee details
-        res.status(200).json({ message: 'Applicants retrieved successfully', applicants });
+        const applicants = await Application_1.default.find({ jobId }).populate("employeeId", "name email phoneNumber"); // Populate employee details
+        res
+            .status(200)
+            .json({ message: "Applicants retrieved successfully", applicants });
     }
     catch (error) {
-        console.error('Error getting applicants for job:', error);
-        res.status(500).json({ message: 'Server error' });
+        console.error("Error getting applicants for job:", error);
+        res.status(500).json({ message: "Server error" });
     }
 };
 exports.getApplicantsForJob = getApplicantsForJob;
@@ -493,22 +467,27 @@ const updateApplicationStatus = async (req, res) => {
         const { status } = req.body;
         const companyId = req.user?.id;
         if (!companyId) {
-            return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+            return res
+                .status(403)
+                .json({ message: "Access Denied: Company ID not found in token" });
         }
         if (!mongoose_1.Types.ObjectId.isValid(applicationId)) {
-            return res.status(400).json({ message: 'Invalid Application ID' });
+            return res.status(400).json({ message: "Invalid Application ID" });
         }
-        if (!status || !['pending', 'reviewed', 'interview', 'hired', 'rejected'].includes(status)) {
-            return res.status(400).json({ message: 'Invalid status value' });
+        if (!status ||
+            !["pending", "reviewed", "interview", "hired", "rejected"].includes(status)) {
+            return res.status(400).json({ message: "Invalid status value" });
         }
         const application = await Application_1.default.findById(applicationId);
         if (!application)
-            return res.status(404).json({ message: 'Application not found' });
+            return res.status(404).json({ message: "Application not found" });
         const job = await Job_1.default.findById(application.jobId);
         if (!job)
-            return res.status(404).json({ message: 'Job not found' });
+            return res.status(404).json({ message: "Job not found" });
         if (job.companyId.toString() !== companyId) {
-            return res.status(403).json({ message: 'Access Denied: You do not own this job' });
+            return res
+                .status(403)
+                .json({ message: "Access Denied: You do not own this job" });
         }
         application.status = status;
         application.notifications.push({
@@ -517,11 +496,13 @@ const updateApplicationStatus = async (req, res) => {
             createdAt: new Date(),
         });
         await application.save();
-        res.status(200).json({ message: 'Application status updated', application });
+        res
+            .status(200)
+            .json({ message: "Application status updated", application });
     }
     catch (error) {
-        console.error('Error updating application status:', error);
-        res.status(500).json({ message: 'Server error' });
+        console.error("Error updating application status:", error);
+        res.status(500).json({ message: "Server error" });
     }
 };
 exports.updateApplicationStatus = updateApplicationStatus;
@@ -532,15 +513,15 @@ const browseEmployees = async (req, res) => {
     try {
         const companyId = req.user?.id;
         if (!companyId)
-            return res.status(403).json({ message: 'Access Denied' });
+            return res.status(403).json({ message: "Access Denied" });
         // Lazy import to avoid circular
-        const { default: Employee } = await Promise.resolve().then(() => __importStar(require('../models/Employee')));
-        const employees = await Employee.find().select('name email phoneNumber jobPreferences skills');
-        res.status(200).json({ message: 'Employees retrieved', employees });
+        const { default: Employee } = await Promise.resolve().then(() => __importStar(require("../models/Employee")));
+        const employees = await Employee.find().select("name email phoneNumber jobPreferences skills");
+        res.status(200).json({ message: "Employees retrieved", employees });
     }
     catch (error) {
-        console.error('Error browsing employees:', error);
-        res.status(500).json({ message: 'Server error' });
+        console.error("Error browsing employees:", error);
+        res.status(500).json({ message: "Server error" });
     }
 };
 exports.browseEmployees = browseEmployees;
@@ -552,15 +533,26 @@ const sendWorkRequest = async (req, res) => {
         const companyId = req.user?.id;
         const { employeeId, message } = req.body;
         if (!companyId)
-            return res.status(403).json({ message: 'Access Denied' });
+            return res.status(403).json({ message: "Access Denied" });
         if (!mongoose_1.Types.ObjectId.isValid(employeeId))
-            return res.status(400).json({ message: 'Invalid employeeId' });
-        const work = await WorkRequest_1.default.create({ companyId, employeeId, message, notifications: [{ message: 'New work request received', read: false, createdAt: new Date() }] });
-        res.status(201).json({ message: 'Work request sent', work });
+            return res.status(400).json({ message: "Invalid employeeId" });
+        const work = await WorkRequest_1.default.create({
+            companyId,
+            employeeId,
+            message,
+            notifications: [
+                {
+                    message: "New work request received",
+                    read: false,
+                    createdAt: new Date(),
+                },
+            ],
+        });
+        res.status(201).json({ message: "Work request sent", work });
     }
     catch (error) {
-        console.error('Error sending work request:', error);
-        res.status(500).json({ message: 'Server error' });
+        console.error("Error sending work request:", error);
+        res.status(500).json({ message: "Server error" });
     }
 };
 exports.sendWorkRequest = sendWorkRequest;
@@ -571,21 +563,23 @@ const uploadLogo = async (req, res) => {
     try {
         const companyId = req.user?.id;
         if (!companyId) {
-            return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+            return res
+                .status(403)
+                .json({ message: "Access Denied: Company ID not found in token" });
         }
         const logoFile = req.body.logo;
         if (!logoFile) {
-            return res.status(400).json({ message: 'No logo file uploaded' });
+            return res.status(400).json({ message: "No logo file uploaded" });
         }
-        const company = await Company_1.default.findByIdAndUpdate(companyId, { logo: logoFile }, { new: true, runValidators: true }).select('-password');
+        const company = await Company_1.default.findByIdAndUpdate(companyId, { logo: logoFile }, { new: true, runValidators: true }).select("-password");
         if (!company) {
-            return res.status(404).json({ message: 'Company not found' });
+            return res.status(404).json({ message: "Company not found" });
         }
-        res.status(200).json({ message: 'Logo uploaded successfully', company });
+        res.status(200).json({ message: "Logo uploaded successfully", company });
     }
     catch (error) {
-        console.error('Error uploading logo:', error);
-        res.status(500).json({ message: 'Server error' });
+        console.error("Error uploading logo:", error);
+        res.status(500).json({ message: "Server error" });
     }
 };
 exports.uploadLogo = uploadLogo;
@@ -596,27 +590,35 @@ const uploadDocuments = async (req, res) => {
     try {
         const companyId = req.user?.id;
         if (!companyId) {
-            return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+            return res
+                .status(403)
+                .json({ message: "Access Denied: Company ID not found in token" });
         }
-        console.log('=== uploadDocuments DEBUG ===');
-        console.log('req.body:', JSON.stringify(req.body, null, 2));
-        console.log('===================================');
+        console.log("=== uploadDocuments DEBUG ===");
+        console.log("req.body:", JSON.stringify(req.body, null, 2));
+        console.log("===================================");
         const rawDocs = req.body.documents;
-        const documents = Array.isArray(rawDocs) ? rawDocs : rawDocs ? [rawDocs] : [];
+        const documents = Array.isArray(rawDocs)
+            ? rawDocs
+            : rawDocs
+                ? [rawDocs]
+                : [];
         if (!documents || documents.length === 0) {
-            return res.status(400).json({ message: 'No documents uploaded' });
+            return res.status(400).json({ message: "No documents uploaded" });
         }
-        const company = await Company_1.default.findByIdAndUpdate(companyId, { $push: { documents: { $each: documents } } }, { new: true, runValidators: true }).select('-password');
+        const company = await Company_1.default.findByIdAndUpdate(companyId, { $push: { documents: { $each: documents } } }, { new: true, runValidators: true }).select("-password");
         if (!company) {
-            return res.status(404).json({ message: 'Company not found' });
+            return res.status(404).json({ message: "Company not found" });
         }
         await recomputeProfileCompletionStatus(companyId);
-        const refreshed = await Company_1.default.findById(companyId).select('-password');
-        res.status(200).json({ message: 'Documents uploaded successfully', company: refreshed });
+        const refreshed = await Company_1.default.findById(companyId).select("-password");
+        res
+            .status(200)
+            .json({ message: "Documents uploaded successfully", company: refreshed });
     }
     catch (error) {
-        console.error('Error uploading documents:', error);
-        res.status(500).json({ message: 'Server error' });
+        console.error("Error uploading documents:", error);
+        res.status(500).json({ message: "Server error" });
     }
 };
 exports.uploadDocuments = uploadDocuments;
@@ -627,24 +629,26 @@ const updateLogo = async (req, res) => {
     try {
         const companyId = req.user?.id;
         if (!companyId) {
-            return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+            return res
+                .status(403)
+                .json({ message: "Access Denied: Company ID not found in token" });
         }
-        console.log('=== updateLogo DEBUG ===');
-        console.log('req.body:', JSON.stringify(req.body, null, 2));
-        console.log('===================================');
+        console.log("=== updateLogo DEBUG ===");
+        console.log("req.body:", JSON.stringify(req.body, null, 2));
+        console.log("===================================");
         const logoFile = req.body.logo;
         if (!logoFile) {
-            return res.status(400).json({ message: 'No logo file uploaded' });
+            return res.status(400).json({ message: "No logo file uploaded" });
         }
-        const company = await Company_1.default.findByIdAndUpdate(companyId, { logo: logoFile }, { new: true, runValidators: true }).select('-password');
+        const company = await Company_1.default.findByIdAndUpdate(companyId, { logo: logoFile }, { new: true, runValidators: true }).select("-password");
         if (!company) {
-            return res.status(404).json({ message: 'Company not found' });
+            return res.status(404).json({ message: "Company not found" });
         }
-        res.status(200).json({ message: 'Logo updated successfully', company });
+        res.status(200).json({ message: "Logo updated successfully", company });
     }
     catch (error) {
-        console.error('Error updating logo:', error);
-        res.status(500).json({ message: 'Server error' });
+        console.error("Error updating logo:", error);
+        res.status(500).json({ message: "Server error" });
     }
 };
 exports.updateLogo = updateLogo;
@@ -655,24 +659,32 @@ const updateDocuments = async (req, res) => {
     try {
         const companyId = req.user?.id;
         if (!companyId) {
-            return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+            return res
+                .status(403)
+                .json({ message: "Access Denied: Company ID not found in token" });
         }
         const rawDocs = req.body.documents;
-        const documents = Array.isArray(rawDocs) ? rawDocs : rawDocs ? [rawDocs] : [];
+        const documents = Array.isArray(rawDocs)
+            ? rawDocs
+            : rawDocs
+                ? [rawDocs]
+                : [];
         if (!documents || documents.length === 0) {
-            return res.status(400).json({ message: 'No documents provided' });
+            return res.status(400).json({ message: "No documents provided" });
         }
-        const company = await Company_1.default.findByIdAndUpdate(companyId, { documents: documents }, { new: true, runValidators: true }).select('-password');
+        const company = await Company_1.default.findByIdAndUpdate(companyId, { documents: documents }, { new: true, runValidators: true }).select("-password");
         if (!company) {
-            return res.status(404).json({ message: 'Company not found' });
+            return res.status(404).json({ message: "Company not found" });
         }
         await recomputeProfileCompletionStatus(companyId);
-        const refreshed = await Company_1.default.findById(companyId).select('-password');
-        res.status(200).json({ message: 'Documents updated successfully', company: refreshed });
+        const refreshed = await Company_1.default.findById(companyId).select("-password");
+        res
+            .status(200)
+            .json({ message: "Documents updated successfully", company: refreshed });
     }
     catch (error) {
-        console.error('Error updating documents:', error);
-        res.status(500).json({ message: 'Server error' });
+        console.error("Error updating documents:", error);
+        res.status(500).json({ message: "Server error" });
     }
 };
 exports.updateDocuments = updateDocuments;
@@ -683,17 +695,19 @@ const deleteLogo = async (req, res) => {
     try {
         const companyId = req.user?.id;
         if (!companyId) {
-            return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+            return res
+                .status(403)
+                .json({ message: "Access Denied: Company ID not found in token" });
         }
-        const company = await Company_1.default.findByIdAndUpdate(companyId, { $unset: { logo: 1 } }, { new: true, runValidators: true }).select('-password');
+        const company = await Company_1.default.findByIdAndUpdate(companyId, { $unset: { logo: 1 } }, { new: true, runValidators: true }).select("-password");
         if (!company) {
-            return res.status(404).json({ message: 'Company not found' });
+            return res.status(404).json({ message: "Company not found" });
         }
-        res.status(200).json({ message: 'Logo deleted successfully', company });
+        res.status(200).json({ message: "Logo deleted successfully", company });
     }
     catch (error) {
-        console.error('Error deleting logo:', error);
-        res.status(500).json({ message: 'Server error' });
+        console.error("Error deleting logo:", error);
+        res.status(500).json({ message: "Server error" });
     }
 };
 exports.deleteLogo = deleteLogo;
@@ -705,58 +719,178 @@ const deleteDocument = async (req, res) => {
         const companyId = req.user?.id;
         const { index } = req.params;
         if (!companyId) {
-            return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+            return res
+                .status(403)
+                .json({ message: "Access Denied: Company ID not found in token" });
         }
         const documentIndex = parseInt(index);
         if (isNaN(documentIndex) || documentIndex < 0) {
-            return res.status(400).json({ message: 'Invalid document index' });
+            return res.status(400).json({ message: "Invalid document index" });
         }
         const company = await Company_1.default.findById(companyId);
         if (!company) {
-            return res.status(404).json({ message: 'Company not found' });
+            return res.status(404).json({ message: "Company not found" });
         }
         if (!company.documents || documentIndex >= company.documents.length) {
-            return res.status(400).json({ message: 'Document index out of range' });
+            return res.status(400).json({ message: "Document index out of range" });
         }
         company.documents.splice(documentIndex, 1);
         await company.save();
         await recomputeProfileCompletionStatus(companyId);
-        const refreshed = await Company_1.default.findById(companyId).select('-password');
-        res.status(200).json({ message: 'Document deleted successfully', company: refreshed });
+        const refreshed = await Company_1.default.findById(companyId).select("-password");
+        res
+            .status(200)
+            .json({ message: "Document deleted successfully", company: refreshed });
     }
     catch (error) {
-        console.error('Error deleting document:', error);
-        res.status(500).json({ message: 'Server error' });
+        console.error("Error deleting document:", error);
+        res.status(500).json({ message: "Server error" });
     }
 };
 exports.deleteDocument = deleteDocument;
 // Determine if a company's profile has enough info to be submitted for review
 const isProfileReadyForReview = (about, documents) => {
-    const hasAbout = typeof about === 'string' && about.trim().length > 0;
+    const hasAbout = typeof about === "string" && about.trim().length > 0;
     const hasDocs = Array.isArray(documents) && documents.length > 0;
     return hasAbout && hasDocs;
 };
 // Recompute and persist the company's profileCompletionStatus based on current data
 const recomputeProfileCompletionStatus = async (companyId) => {
-    const company = await Company_1.default.findById(companyId).select('about documents isApproved status profileCompletionStatus');
+    const company = await Company_1.default.findById(companyId).select("about documents isApproved status profileCompletionStatus");
     if (!company)
         return null;
-    let nextStatus = 'incomplete';
+    let nextStatus = "incomplete";
     // If already approved and active, mark as complete
-    if (company.isApproved && company.status === 'approved') {
-        nextStatus = 'complete';
+    if (company.isApproved && company.status === "approved") {
+        nextStatus = "complete";
     }
     else if (isProfileReadyForReview(company.about, company.documents)) {
-        nextStatus = 'pending_review';
+        nextStatus = "pending_review";
     }
     if (company.profileCompletionStatus !== nextStatus) {
         await Company_1.default.findByIdAndUpdate(companyId, {
             $set: {
                 profileCompletionStatus: nextStatus,
                 // Only set completedAt when truly complete (admin approved)
-                ...(nextStatus === 'complete' ? { profileCompletedAt: new Date() } : {})
-            }
+                ...(nextStatus === "complete"
+                    ? { profileCompletedAt: new Date() }
+                    : {}),
+            },
         });
     }
     return nextStatus;
 };
+/**
+ * Get company notifications
+ */
+const getCompanyNotifications = async (req, res) => {
+    try {
+        const companyId = req.user?.id;
+        if (!companyId) {
+            return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+        }
+        // Get notifications from work requests and applications
+        const workRequests = await WorkRequest_1.default.find({ companyId }).select('notifications');
+        const applications = await Application_1.default.find({
+            jobId: { $in: await Job_1.default.find({ companyId }).select('_id') }
+        }).select('notifications');
+        const workRequestNotifications = workRequests.flatMap(wr => wr.notifications);
+        const applicationNotifications = applications.flatMap(app => app.notifications);
+        const allNotifications = [...workRequestNotifications, ...applicationNotifications];
+        res.status(200).json({
+            message: 'Company notifications retrieved successfully',
+            notifications: allNotifications
+        });
+    }
+    catch (error) {
+        console.error('Error getting company notifications:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+exports.getCompanyNotifications = getCompanyNotifications;
+/**
+ * Mark company notification as read
+ */
+const markCompanyNotificationRead = async (req, res) => {
+    try {
+        const companyId = req.user?.id;
+        const { notificationId } = req.params;
+        if (!companyId) {
+            return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+        }
+        if (!mongoose_1.Types.ObjectId.isValid(notificationId)) {
+            return res.status(400).json({ message: 'Invalid notification ID' });
+        }
+        // Find and update notification in work requests
+        const workRequestUpdated = await WorkRequest_1.default.updateOne({
+            companyId,
+            'notifications._id': notificationId
+        }, {
+            $set: {
+                'notifications.$.read': true
+            }
+        });
+        // Find and update notification in applications
+        const jobIds = await Job_1.default.find({ companyId }).select('_id');
+        const applicationUpdated = await Application_1.default.updateOne({
+            jobId: { $in: jobIds },
+            'notifications._id': notificationId
+        }, {
+            $set: {
+                'notifications.$.read': true
+            }
+        });
+        if (workRequestUpdated.modifiedCount === 0 && applicationUpdated.modifiedCount === 0) {
+            return res.status(404).json({ message: 'Notification not found' });
+        }
+        res.status(200).json({ message: 'Notification marked as read' });
+    }
+    catch (error) {
+        console.error('Error marking company notification as read:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+exports.markCompanyNotificationRead = markCompanyNotificationRead;
+/**
+ * Delete company notification
+ */
+const deleteCompanyNotification = async (req, res) => {
+    try {
+        const companyId = req.user?.id;
+        const { notificationId } = req.params;
+        if (!companyId) {
+            return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+        }
+        if (!mongoose_1.Types.ObjectId.isValid(notificationId)) {
+            return res.status(400).json({ message: 'Invalid notification ID' });
+        }
+        // Find and delete notification from work requests
+        const workRequestUpdated = await WorkRequest_1.default.updateOne({
+            companyId,
+            'notifications._id': notificationId
+        }, {
+            $pull: {
+                notifications: { _id: notificationId }
+            }
+        });
+        // Find and delete notification from applications
+        const jobIds = await Job_1.default.find({ companyId }).select('_id');
+        const applicationUpdated = await Application_1.default.updateOne({
+            jobId: { $in: jobIds },
+            'notifications._id': notificationId
+        }, {
+            $pull: {
+                notifications: { _id: notificationId }
+            }
+        });
+        if (workRequestUpdated.modifiedCount === 0 && applicationUpdated.modifiedCount === 0) {
+            return res.status(404).json({ message: 'Notification not found' });
+        }
+        res.status(200).json({ message: 'Notification deleted successfully' });
+    }
+    catch (error) {
+        console.error('Error deleting company notification:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+exports.deleteCompanyNotification = deleteCompanyNotification;
