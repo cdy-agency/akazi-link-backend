@@ -32,7 +32,10 @@ mongoose.connect(MONGO_URI)
 .catch((err) => console.error('MongoDB connection error:', err));
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : ['http://localhost:3000', 'https://job-platform-rouge.vercel.app'],
+  credentials: true
+}));
 app.use(express.json());
 
 // Swagger setup

@@ -35,7 +35,7 @@ return bcrypt.compare(plainPassword, hashedPassword);
 * @returns The generated JWT token.
 */
 export const generateToken = (payload: object): string => {
-return jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' }); // Token expires in 1 hour
+return jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' }); // Token expires in 1 hour
 };
 
 /**
