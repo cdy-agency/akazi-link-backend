@@ -42,6 +42,7 @@ export interface ICompany extends IUser {
 export interface IEmployee extends IUser {
   name: string;
   dateOfBirth?: Date;
+  image?: string
   phoneNumber?: string;
   jobPreferences?: string[];
   about?: string;
@@ -82,6 +83,7 @@ export interface IApplication extends Document {
   employeeId: Types.ObjectId;
   skills?: string[];
   experience?: string;
+  resume: string,
   appliedVia: "normal" | "whatsapp" | "referral";
   status: "pending" | "reviewed" | "interview" | "hired" | "rejected";
   notifications: INotification[];

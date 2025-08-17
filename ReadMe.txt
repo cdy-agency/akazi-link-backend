@@ -135,6 +135,24 @@ Company (requires role=company; some actions require approval)
   - GET  /company/employees
   - POST /company/work-requests
 
+Employee (requires role=employee)
+- GET  /employee/profile
+- PATCH /employee/profile
+- GET  /employee/jobs?category=IT%20%26%20Software
+- GET  /employee/suggestions?category=IT%20%26%20Software
+- POST /employee/apply/:jobId
+  - body: { skills: string[], experience: string, appliedVia: 'normal' | 'whatsapp' | 'referral' }
+- GET  /employee/applications
+- GET  /employee/notifications
+- GET  /employee/work-requests
+- PATCH /employee/work-requests/:id/respond
+  - body: { action: 'accept' | 'reject' }
+
+Notes for Employee UI
+- Applications list populates job title and company (name, logo).
+- Notifications are aggregated from applications.notifications.
+- Jobs endpoints populate company info needed for cards (companyName, logo, location in public list).
+
 Admin (requires role=superadmin)
 - POST  /admin/login
 - PATCH /admin/update-password (field: image optional)

@@ -1,5 +1,16 @@
 import mongoose, { Schema, Types } from 'mongoose';
-import { IApplication, INotification } from '../types/models';
+import { IApplication, IFileInfo, INotification } from '../types/models';
+
+const FileInfoSchema = new Schema<IFileInfo>({
+  url: { type: String, required: true },
+  public_id: { type: String, required: true },
+  format: { type: String, required: true },
+  size: { type: Number, required: true },
+  name: { type: String, required: true },
+  type: { type: String, required: true },
+  time: { type: String, required: true }
+});
+
 
 const NotificationSchema: Schema = new Schema(
 {
@@ -14,6 +25,7 @@ const ApplicationSchema: Schema = new Schema(
 {
   jobId: { type: Types.ObjectId, ref: 'Job', required: true },
   employeeId: { type: Types.ObjectId, ref: 'Employee', required: true },
+  resume:{type: String},
   skills: { type: [String], default: [] },
   experience: { type: String },
   appliedVia: {

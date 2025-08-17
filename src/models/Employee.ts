@@ -7,6 +7,7 @@ const EmployeeSchema: Schema = new Schema(
   name: { type: String, required: true },
   dateOfBirth: { type: Date },
   phoneNumber: { type: String },
+  image:{type: String},
   jobPreferences: { type: [String], default: [] },
   about: { type: String },
   experience: { type: String },
