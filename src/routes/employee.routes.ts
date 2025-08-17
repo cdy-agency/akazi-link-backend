@@ -17,7 +17,7 @@ import {
 import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware';
 import uploadSingle, {uploadMultiple} from 'rod-fileupload';
 import cloudinary from '../config/cloudinary';
-import { uploadDocuments } from '../controllers/company.controller';
+
 
 const router = Router();
 
