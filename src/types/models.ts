@@ -48,7 +48,6 @@ export interface IEmployee extends IUser {
   about?: string;
   experience?: string;
   education?: string;
-  profileImage?: string;
   skills?: string[];
   documents?: string[];
 }
