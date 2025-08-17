@@ -3,6 +3,7 @@ import { hashPassword, comparePasswords, generateToken } from '../utils/authUtil
 import Employee from '../models/Employee';
 import Company from '../models/Company';
 import User from '../models/User';
+import { parseSingleFile } from '../services/fileUploadService';
 
 /**
 * @swagger
@@ -172,7 +173,8 @@ try {
 */
 export const registerCompany = async (req: Request, res: Response) => {
 try {
-  const { companyName, email, password, location, phoneNumber, website, logo } = req.body as any;
+  const { companyName, email, password, location, phoneNumber, website } = req.body as any;
+  const logo = parseSingleFile((req.body as any).logo);
 
   if (!companyName || !email || !password) {
     return res.status(400).json({ message: 'Please provide company name, email, and password' });
@@ -195,7 +197,7 @@ try {
     website,
     // Store full file info object when provided by rod-fileupload middleware.
     // If a legacy string URL is provided, skip setting logo to avoid schema cast errors.
-    ...(logo && typeof logo === 'object' ? { logo } : {}),
+    ...(logo ? { logo } : {}),
     isApproved: false, 
     status: 'pending',
     isActive: true,

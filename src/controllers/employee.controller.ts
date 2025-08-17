@@ -5,7 +5,7 @@ import Job from '../models/Job';
 import Application from '../models/Application';
 import { Types } from 'mongoose';
 import WorkRequest from '../models/WorkRequest';
-import { parseSingleFile, parseMultipleFiles, updateSingleFileField, pushMultipleFiles } from '../services/fileUploadService';
+import { parseSingleFile, parseMultipleFiles } from '../services/fileUploadService';
 
 
 export const getProfile = async (req: Request, res: Response) => {

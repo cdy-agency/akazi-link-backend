@@ -242,19 +242,14 @@ const completeCompanyProfile = async (req, res) => {
         }
         const bodyAny = req.body;
         const about = typeof bodyAny.about === "string" ? bodyAny.about : undefined;
-        const logo = bodyAny.logo;
-        const rawDocs = bodyAny.documents;
-        const documents = Array.isArray(rawDocs)
-            ? rawDocs
-            : rawDocs
-                ? [rawDocs]
-                : undefined;
+        const logo = (0, fileUploadService_1.parseSingleFile)(bodyAny.logo);
+        const documents = (0, fileUploadService_1.parseMultipleFiles)(bodyAny.documents);
         const set = {};
         if (typeof about === "string")
             set.about = about;
         if (logo)
             set.logo = logo;
-        if (documents && Array.isArray(documents))
+        if (documents && documents.length)
             set.documents = documents;
         // Do NOT mark as complete here. Mark as pending_review if criteria met.
         // Admin approval will mark it as complete later.

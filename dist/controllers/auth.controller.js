@@ -8,6 +8,7 @@ const authUtils_1 = require("../utils/authUtils");
 const Employee_1 = __importDefault(require("../models/Employee"));
 const Company_1 = __importDefault(require("../models/Company"));
 const User_1 = __importDefault(require("../models/User"));
+const fileUploadService_1 = require("../services/fileUploadService");
 /**
 * @swagger
 * tags:
@@ -171,7 +172,8 @@ exports.registerEmployee = registerEmployee;
 */
 const registerCompany = async (req, res) => {
     try {
-        const { companyName, email, password, location, phoneNumber, website, logo } = req.body;
+        const { companyName, email, password, location, phoneNumber, website } = req.body;
+        const logo = (0, fileUploadService_1.parseSingleFile)(req.body.logo);
         if (!companyName || !email || !password) {
             return res.status(400).json({ message: 'Please provide company name, email, and password' });
         }
@@ -190,7 +192,7 @@ const registerCompany = async (req, res) => {
             website,
             // Store full file info object when provided by rod-fileupload middleware.
             // If a legacy string URL is provided, skip setting logo to avoid schema cast errors.
-            ...(logo && typeof logo === 'object' ? { logo } : {}),
+            ...(logo ? { logo } : {}),
             isApproved: false,
             status: 'pending',
             isActive: true,

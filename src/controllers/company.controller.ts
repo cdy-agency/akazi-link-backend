@@ -225,18 +225,13 @@ export const completeCompanyProfile = async (req: Request, res: Response) => {
 
     const bodyAny = req.body as any;
     const about = typeof bodyAny.about === "string" ? bodyAny.about : undefined;
-    const logo = bodyAny.logo as IFileInfo | undefined;
-    const rawDocs = bodyAny.documents as any;
-    const documents: IFileInfo[] | undefined = Array.isArray(rawDocs)
-      ? rawDocs
-      : rawDocs
-      ? [rawDocs]
-      : undefined;
+    const logo = parseSingleFile(bodyAny.logo);
+    const documents = parseMultipleFiles(bodyAny.documents);
 
     const set: any = {};
     if (typeof about === "string") set.about = about;
     if (logo) set.logo = logo;
-    if (documents && Array.isArray(documents)) set.documents = documents;
+    if (documents && documents.length) set.documents = documents;
 
     // Do NOT mark as complete here. Mark as pending_review if criteria met.
     // Admin approval will mark it as complete later.
