@@ -204,7 +204,7 @@ try {
   res.status(201).json({ message: 'Company registered successfully. Awaiting admin approval.', company: company.toJSON() });
 } catch (error) {
   console.error('Error registering company:', error);
-  res.status(500).json({ message: 'Server error during company registration' ,error});
+  res.status(500).json({ message: 'Server error during company registration' });
 }
 };
 
@@ -268,19 +268,24 @@ try {
 */
 export const login = async (req: Request, res: Response) => {
 try {
+  console.log('Login attempt for email:', req.body.email);
   const { email, password } = req.body;
 
   if (!email || !password) {
+    console.log('Missing email or password');
     return res.status(400).json({ message: 'Please provide email and password' });
   }
 
   const user = await User.findOne({ email });
   if (!user) {
+    console.log('User not found for email:', email);
     return res.status(400).json({ message: 'Invalid credentials' });
   }
 
+  console.log('User found, role:', user.role);
   const isMatch = await comparePasswords(password, user.password!);
   if (!isMatch) {
+    console.log('Password mismatch for user:', email);
     return res.status(400).json({ message: 'Invalid credentials' });
   }
 
@@ -292,14 +297,15 @@ try {
   if (user.role === 'company') {
     const company = await Company.findById(user._id as any);
     if (!company) {
+      console.log('Company profile not found for user:', email);
       return res.status(400).json({ message: 'Company profile not found' });
     }
     responsePayload.isApproved = company.isApproved;
-    // If company is not approved, they can log in but won't have full access
-    // The authorizeRoles middleware will handle restricting access to full functionality
+    console.log('Company approval status:', company.isApproved);
   }
 
   const token = generateToken(responsePayload);
+  console.log('Token generated successfully for user:', email);
 
   res.status(200).json({
     message: 'Login successful',
@@ -308,7 +314,12 @@ try {
     ...(user.role === 'company' && { isApproved: responsePayload.isApproved }),
   });
 } catch (error) {
-  res.status(500).json({ message: 'Server error during login' , error});
+  console.error('Login error details:', {
+    message: error instanceof Error ? error.message : 'Unknown error',
+    stack: error instanceof Error ? error.stack : undefined,
+    email: req.body?.email
+  });
+  res.status(500).json({ message: 'Server error during login' });
 }
 };
 

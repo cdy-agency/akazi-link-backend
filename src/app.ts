@@ -26,10 +26,14 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/joblink';
 mongoose.connect(MONGO_URI)
 .then(() => {
   console.log('MongoDB connected successfully');
+  console.log('MongoDB URI:', MONGO_URI);
   seedSuperAdmin(); // Seed SuperAdmin after successful connection
   migrateCompanyStatus(); // Migrate existing companies to new status fields
 })
-.catch((err) => console.error('MongoDB connection error:', err));
+.catch((err) => {
+  console.error('MongoDB connection error:', err);
+  console.error('MongoDB URI used:', MONGO_URI);
+});
 
 // Middleware
 app.use(cors({
