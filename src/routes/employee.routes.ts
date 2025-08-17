@@ -12,9 +12,10 @@ import {
   markNotificationRead,
   deleteEmployeeNotification,
   uploadEmployeeDocuments,
+  uploadProfileImage,
 } from '../controllers/employee.controller';
 import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware';
-import {uploadMultiple} from 'rod-fileupload';
+import uploadSingle, {uploadMultiple} from 'rod-fileupload';
 import cloudinary from '../config/cloudinary';
 import { uploadDocuments } from '../controllers/company.controller';
 
@@ -25,7 +26,8 @@ router.use(authorizeRoles(['employee'])); // All employee routes require employe
 
 
 router.get('/profile', getProfile);
-router.patch('/profile', uploadMultiple('image', cloudinary),updateEmployeeProfile);
+router.patch('/profile', updateEmployeeProfile);
+router.post('/upload/image', uploadSingle('image', cloudinary), uploadProfileImage);
 router.post('/upload/documents',uploadMultiple('documents', cloudinary), uploadEmployeeDocuments);
 
 

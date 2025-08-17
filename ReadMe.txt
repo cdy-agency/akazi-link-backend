@@ -154,6 +154,8 @@ Company (requires role=company; some actions require approval)
 Employee (requires role=employee)
 - GET  /employee/profile
 - PATCH /employee/profile
+- POST /employee/upload/image (field: image)
+- POST /employee/upload/documents (field: documents)
 - GET  /employee/jobs?category=IT%20%26%20Software
 - GET  /employee/suggestions?category=IT%20%26%20Software
 - POST /employee/apply/:jobId

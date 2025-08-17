@@ -354,3 +354,34 @@ export const uploadEmployeeDocuments = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+export const uploadProfileImage = async (req: Request, res: Response) => {
+  try {
+    const employeeId = req.user?.id;
+    if (!employeeId) {
+      return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
+    }
+
+    const img = (req.body as any).image;
+    const url = typeof img === 'string' ? img : (img && typeof img === 'object' && img.url ? img.url : undefined);
+
+    if (!url) {
+      return res.status(400).json({ message: 'No image uploaded' });
+    }
+
+    const employee = await Employee.findByIdAndUpdate(
+      employeeId,
+      { $set: { profileImage: url } },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    res.status(200).json({ message: 'Profile image updated successfully', employee });
+  } catch (error) {
+    console.error('Error uploading employee profile image:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
