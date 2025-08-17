@@ -195,6 +195,47 @@ Admin (requires role=superadmin)
   - PATCH  /admin/notifications/:notificationId/read
   - DELETE /admin/notifications/:notificationId
 
+Reusable Upload Service (for devs)
+- Shared parser and updater used across controllers: `src/services/fileUploadService.ts`
+  - parseSingleFile(input): accepts a rod-fileupload FileInfo-like object and returns a normalized FileInfo or undefined
+  - parseMultipleFiles(input): accepts a single or array and returns FileInfo[]
+  - updateSingleFileField(model, id, path, file): sets a single FileInfo field
+  - pushMultipleFiles(model, id, path, files): appends multiple FileInfo to an array field
+  - replaceMultipleFiles(model, id, path, files): replaces an array field with FileInfo[]
+
+Frontend usage with rod-fileupload
+- Always send multipart/form-data; field names must match exactly:
+  - Company:
+    - Single: `logo` to /company/upload/logo or /company/update/logo
+    - Multiple: `documents` to /company/upload/documents or /company/update/documents
+  - Employee:
+    - Single: `image` to /employee/upload/image
+    - Multiple: `documents` to /employee/upload/documents
+- rod-fileupload attaches parsed file info in req.body keys with this shape (example):
+  {
+    url: string,
+    public_id: string,
+    format: string,
+    size: number,
+    name: string,
+    type: string,
+    time: string
+  }
+
+Quick examples (fetch)
+- Upload employee image:
+  const fd = new FormData();
+  fd.append('image', file);
+  await fetch('/api/employee/upload/image', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
+- Upload multiple employee documents:
+  const fd = new FormData();
+  files.forEach(f => fd.append('documents', f));
+  await fetch('/api/employee/upload/documents', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
+
+Auth tokens
+- Employee endpoints require a token with role=employee
+- Company endpoints require a token with role=company; some require approval
+
 Frontend Integration Notes
 - File Uploads (rod-fileupload):
   - For single file: send multipart/form-data with field name matching backend route expectation (logo, image, etc.)
