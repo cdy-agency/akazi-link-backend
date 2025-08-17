@@ -5,6 +5,7 @@ import Job from '../models/Job';
 import Application from '../models/Application';
 import { Types } from 'mongoose';
 import WorkRequest from '../models/WorkRequest';
+import { parseSingleFile, parseMultipleFiles, updateSingleFileField, pushMultipleFiles } from '../services/fileUploadService';
 
 
 export const getProfile = async (req: Request, res: Response) => {
@@ -328,11 +329,8 @@ export const uploadEmployeeDocuments = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
     }
 
-    const rawDocs = (req.body as any).documents as any;
-    const docsArray = Array.isArray(rawDocs) ? rawDocs : rawDocs ? [rawDocs] : [];
-    const urls: string[] = docsArray
-      .map((doc: any) => (typeof doc === 'string' ? doc : (doc && typeof doc === 'object' && doc.url ? doc.url : null)))
-      .filter((u: string | null): u is string => Boolean(u));
+    const files = parseMultipleFiles((req.body as any).documents);
+    const urls = files.map(f => f.url);
 
     if (!urls.length) {
       return res.status(400).json({ message: 'No documents uploaded' });
@@ -362,8 +360,8 @@ export const uploadProfileImage = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
     }
 
-    const img = (req.body as any).image;
-    const url = typeof img === 'string' ? img : (img && typeof img === 'object' && img.url ? img.url : undefined);
+    const file = parseSingleFile((req.body as any).image);
+    const url = file?.url;
 
     if (!url) {
       return res.status(400).json({ message: 'No image uploaded' });
