@@ -18,6 +18,7 @@ import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware
 import uploadSingle, {uploadMultiple} from 'rod-fileupload';
 import cloudinary from '../config/cloudinary';
 
+
 const router = Router();
 
 router.use(authenticateToken); // All employee routes require authentication
