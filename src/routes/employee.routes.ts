@@ -11,6 +11,7 @@ import {
   respondWorkRequest,
   markNotificationRead,
   deleteEmployeeNotification,
+  uploadEmployeeDocuments,
 } from '../controllers/employee.controller';
 import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware';
 import {uploadMultiple} from 'rod-fileupload';
@@ -25,7 +26,7 @@ router.use(authorizeRoles(['employee'])); // All employee routes require employe
 
 router.get('/profile', getProfile);
 router.patch('/profile', uploadMultiple('image', cloudinary),updateEmployeeProfile);
-router.post('/upload/documents',uploadMultiple('documents', cloudinary), uploadDocuments);
+router.post('/upload/documents',uploadMultiple('documents', cloudinary), uploadEmployeeDocuments);
 
 
 router.get('/jobs', getJobsByCategory);

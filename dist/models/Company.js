@@ -21,7 +21,7 @@ const CompanySchema = new mongoose_1.Schema({
     website: { type: String },
     logo: { type: FileInfoSchema },
     isApproved: { type: Boolean, default: false },
-    password: { type: String, require: true },
+    password: { type: String, required: true },
     about: { type: String },
     documents: { type: [FileInfoSchema], default: [] },
     status: {

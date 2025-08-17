@@ -35,7 +35,7 @@ exports.comparePasswords = comparePasswords;
 * @returns The generated JWT token.
 */
 const generateToken = (payload) => {
-    return jsonwebtoken_1.default.sign(payload, JWT_SECRET, { expiresIn: '1h' }); // Token expires in 1 hour
+    return jsonwebtoken_1.default.sign(payload, JWT_SECRET, { expiresIn: '30d' }); // Token expires in 1 hour
 };
 exports.generateToken = generateToken;
 /**

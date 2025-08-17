@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import Job from '../models/Job';
 import User from '../models/User';
 
+
 /**
  * @swagger
  * tags:

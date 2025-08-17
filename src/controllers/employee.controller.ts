@@ -320,3 +320,37 @@ export const deleteEmployeeNotification = async (req: Request, res: Response) =>
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+export const uploadEmployeeDocuments = async (req: Request, res: Response) => {
+  try {
+    const employeeId = req.user?.id;
+    if (!employeeId) {
+      return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
+    }
+
+    const rawDocs = (req.body as any).documents as any;
+    const docsArray = Array.isArray(rawDocs) ? rawDocs : rawDocs ? [rawDocs] : [];
+    const urls: string[] = docsArray
+      .map((doc: any) => (typeof doc === 'string' ? doc : (doc && typeof doc === 'object' && doc.url ? doc.url : null)))
+      .filter((u: string | null): u is string => Boolean(u));
+
+    if (!urls.length) {
+      return res.status(400).json({ message: 'No documents uploaded' });
+    }
+
+    const employee = await Employee.findByIdAndUpdate(
+      employeeId,
+      { $push: { documents: { $each: urls } } },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    res.status(200).json({ message: 'Documents uploaded successfully', employee });
+  } catch (error) {
+    console.error('Error uploading employee documents:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
