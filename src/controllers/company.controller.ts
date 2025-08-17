@@ -7,6 +7,7 @@ import { Types } from "mongoose";
 import WorkRequest from "../models/WorkRequest";
 import { comparePasswords, hashPassword } from "../utils/authUtils";
 import { IFileInfo } from "../types/models";
+import { parseSingleFile, parseMultipleFiles, updateSingleFileField, pushMultipleFiles, replaceMultipleFiles } from '../services/fileUploadService';
 
 /**
  * @swagger
@@ -594,16 +595,12 @@ export const uploadLogo = async (req: Request, res: Response) => {
         .json({ message: "Access Denied: Company ID not found in token" });
     }
 
-    const logoFile = req.body.logo as IFileInfo;
+    const logoFile = parseSingleFile((req.body as any).logo);
     if (!logoFile) {
       return res.status(400).json({ message: "No logo file uploaded" });
     }
 
-    const company = await Company.findByIdAndUpdate(
-      companyId,
-      { logo: logoFile },
-      { new: true, runValidators: true }
-    ).select("-password");
+    const company = await updateSingleFileField(Company as any, companyId, 'logo', logoFile) as any;
 
     if (!company) {
       return res.status(404).json({ message: "Company not found" });
@@ -632,21 +629,12 @@ export const uploadDocuments = async (req: Request, res: Response) => {
     console.log("req.body:", JSON.stringify(req.body, null, 2));
     console.log("===================================");
 
-    const rawDocs = (req.body as any).documents as any;
-    const documents: IFileInfo[] = Array.isArray(rawDocs)
-      ? rawDocs
-      : rawDocs
-      ? [rawDocs]
-      : [];
+    const documents = parseMultipleFiles((req.body as any).documents);
     if (!documents || documents.length === 0) {
       return res.status(400).json({ message: "No documents uploaded" });
     }
 
-    const company = await Company.findByIdAndUpdate(
-      companyId,
-      { $push: { documents: { $each: documents } } },
-      { new: true, runValidators: true }
-    ).select("-password");
+    const company = await pushMultipleFiles(Company as any, companyId, 'documents', documents) as any;
 
     if (!company) {
       return res.status(404).json({ message: "Company not found" });
@@ -680,16 +668,12 @@ export const updateLogo = async (req: Request, res: Response) => {
     console.log("req.body:", JSON.stringify(req.body, null, 2));
     console.log("===================================");
 
-    const logoFile = req.body.logo as IFileInfo;
+    const logoFile = parseSingleFile((req.body as any).logo);
     if (!logoFile) {
       return res.status(400).json({ message: "No logo file uploaded" });
     }
 
-    const company = await Company.findByIdAndUpdate(
-      companyId,
-      { logo: logoFile },
-      { new: true, runValidators: true }
-    ).select("-password");
+    const company = await updateSingleFileField(Company as any, companyId, 'logo', logoFile) as any;
 
     if (!company) {
       return res.status(404).json({ message: "Company not found" });
@@ -714,21 +698,12 @@ export const updateDocuments = async (req: Request, res: Response) => {
         .json({ message: "Access Denied: Company ID not found in token" });
     }
 
-    const rawDocs = (req.body as any).documents as any;
-    const documents: IFileInfo[] = Array.isArray(rawDocs)
-      ? rawDocs
-      : rawDocs
-      ? [rawDocs]
-      : [];
+    const documents = parseMultipleFiles((req.body as any).documents);
     if (!documents || documents.length === 0) {
       return res.status(400).json({ message: "No documents provided" });
     }
 
-    const company = await Company.findByIdAndUpdate(
-      companyId,
-      { documents: documents },
-      { new: true, runValidators: true }
-    ).select("-password");
+    const company = await replaceMultipleFiles(Company as any, companyId, 'documents', documents) as any;
 
     if (!company) {
       return res.status(404).json({ message: "Company not found" });
