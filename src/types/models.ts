@@ -64,7 +64,7 @@ export interface IJob extends Document {
     category: string;
   salaryMin: string,
   salaryMax: string,
-  Responsibilities?: string[],
+  responsibilities?: string[],
   benefits?: string[];
   companyId: Types.ObjectId;
   applicationDeadline: string;

@@ -794,3 +794,77 @@ export const rejectCompanyProfile = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+/**
+ * Get admin notifications
+ */
+export const getAdminNotifications = async (req: Request, res: Response) => {
+  try {
+    // For admin, we can aggregate notifications from various sources
+    // For now, let's create some system notifications
+    const notifications = [
+      {
+        _id: '1',
+        message: 'New company registration pending review',
+        read: false,
+        createdAt: new Date(),
+        type: 'system'
+      },
+      {
+        _id: '2', 
+        message: 'New employee registered',
+        read: false,
+        createdAt: new Date(),
+        type: 'system'
+      }
+    ];
+
+    res.status(200).json({ 
+      message: 'Admin notifications retrieved successfully', 
+      notifications 
+    });
+  } catch (error) {
+    console.error('Error getting admin notifications:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Mark admin notification as read
+ */
+export const markAdminNotificationRead = async (req: Request, res: Response) => {
+  try {
+    const { notificationId } = req.params;
+
+    if (!notificationId) {
+      return res.status(400).json({ message: 'Notification ID is required' });
+    }
+
+    // In a real implementation, you would update the notification in the database
+    // For now, we'll just return success
+    res.status(200).json({ message: 'Notification marked as read' });
+  } catch (error) {
+    console.error('Error marking admin notification as read:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Delete admin notification
+ */
+export const deleteAdminNotification = async (req: Request, res: Response) => {
+  try {
+    const { notificationId } = req.params;
+
+    if (!notificationId) {
+      return res.status(400).json({ message: 'Notification ID is required' });
+    }
+
+    // In a real implementation, you would delete the notification from the database
+    // For now, we'll just return success
+    res.status(200).json({ message: 'Notification deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting admin notification:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

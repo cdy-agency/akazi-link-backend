@@ -26,7 +26,7 @@ const JobSchema: Schema = new Schema(
   salaryMin: { type: String },
   salaryMax: { type: String },
   category: { type: String},
-  Responsibilities: {type:[String],default:[]},
+  responsibilities: {type:[String],default:[]},
   benefits: { type: [String], default: [] },
   companyId: { type: Types.ObjectId, ref: 'Company', required: true },
   applicationDeadline: {type:String}

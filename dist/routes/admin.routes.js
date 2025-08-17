@@ -373,4 +373,8 @@ router.get('/company/:id', admin_controller_1.getCompanyDetailsForReview);
 router.patch('/company/:id/approve-profile', admin_controller_1.approveCompanyProfile);
 router.patch('/company/:id/reject-profile', admin_controller_1.rejectCompanyProfile);
 router.get('/employees', admin_controller_1.getAllEmployees);
+// Admin notifications
+router.get('/notifications', admin_controller_1.getAdminNotifications);
+router.patch('/notifications/:notificationId/read', admin_controller_1.markAdminNotificationRead);
+router.delete('/notifications/:notificationId', admin_controller_1.deleteAdminNotification);
 exports.default = router;

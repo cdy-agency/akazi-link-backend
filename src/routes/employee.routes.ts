@@ -1,14 +1,16 @@
 import { Router } from 'express';
 import {
-getProfile,
-getJobsByCategory,
-getJobSuggestions,
-applyForJob,
-getApplications,
-getNotifications,
+  getProfile,
+  getJobsByCategory,
+  getJobSuggestions,
+  applyForJob,
+  getApplications,
+  getNotifications,
   updateEmployeeProfile,
   listWorkRequests,
   respondWorkRequest,
+  markNotificationRead,
+  deleteEmployeeNotification,
 } from '../controllers/employee.controller';
 import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware';
 import {uploadMultiple} from 'rod-fileupload';
@@ -37,6 +39,8 @@ router.post('/apply/:jobId', applyForJob);
 router.get('/applications', getApplications);
 
 router.get('/notifications', getNotifications);
+router.patch('/notifications/:notificationId/read', markNotificationRead);
+router.delete('/notifications/:notificationId', deleteEmployeeNotification);
 
 // Work requests
 router.get('/work-requests', listWorkRequests);

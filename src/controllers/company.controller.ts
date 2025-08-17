@@ -349,6 +349,7 @@ export const postJob = async (req: Request, res: Response) => {
       applicationDeadline,
       category,
       benefits,
+      responsibilities,
     } = req.body;
 
     if (!title || !description || !employmentType || !category) {
@@ -372,6 +373,7 @@ export const postJob = async (req: Request, res: Response) => {
       salaryMax,
       category,
       benefits: Array.isArray(benefits) ? benefits : [],
+      responsibilities: Array.isArray(responsibilities) ? responsibilities : [],
       applicationDeadline,
       companyId,
     });
@@ -857,4 +859,144 @@ const recomputeProfileCompletionStatus = async (companyId: string) => {
   }
 
   return nextStatus;
+};
+
+/**
+ * Get company notifications
+ */
+export const getCompanyNotifications = async (req: Request, res: Response) => {
+  try {
+    const companyId = req.user?.id;
+    
+    if (!companyId) {
+      return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+    }
+
+    // Get notifications from work requests and applications
+    const workRequests = await WorkRequest.find({ companyId }).select('notifications');
+    const applications = await Application.find({ 
+      jobId: { $in: await Job.find({ companyId }).select('_id') }
+    }).select('notifications');
+
+    const workRequestNotifications = workRequests.flatMap(wr => wr.notifications);
+    const applicationNotifications = applications.flatMap(app => app.notifications);
+
+    const allNotifications = [...workRequestNotifications, ...applicationNotifications];
+
+    res.status(200).json({ 
+      message: 'Company notifications retrieved successfully', 
+      notifications: allNotifications 
+    });
+  } catch (error) {
+    console.error('Error getting company notifications:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Mark company notification as read
+ */
+export const markCompanyNotificationRead = async (req: Request, res: Response) => {
+  try {
+    const companyId = req.user?.id;
+    const { notificationId } = req.params;
+
+    if (!companyId) {
+      return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+    }
+
+    if (!Types.ObjectId.isValid(notificationId)) {
+      return res.status(400).json({ message: 'Invalid notification ID' });
+    }
+
+    // Find and update notification in work requests
+    const workRequestUpdated = await WorkRequest.updateOne(
+      { 
+        companyId, 
+        'notifications._id': notificationId 
+      },
+      { 
+        $set: { 
+          'notifications.$.read': true 
+        } 
+      }
+    );
+
+    // Find and update notification in applications
+    const jobIds = await Job.find({ companyId }).select('_id');
+    const applicationUpdated = await Application.updateOne(
+      { 
+        jobId: { $in: jobIds }, 
+        'notifications._id': notificationId 
+      },
+      { 
+        $set: { 
+          'notifications.$.read': true 
+        } 
+      }
+    );
+
+    if (workRequestUpdated.modifiedCount === 0 && applicationUpdated.modifiedCount === 0) {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
+
+    res.status(200).json({ message: 'Notification marked as read' });
+  } catch (error) {
+    console.error('Error marking company notification as read:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Delete company notification
+ */
+export const deleteCompanyNotification = async (req: Request, res: Response) => {
+  try {
+    const companyId = req.user?.id;
+    const { notificationId } = req.params;
+
+    if (!companyId) {
+      return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+    }
+
+    if (!Types.ObjectId.isValid(notificationId)) {
+      return res.status(400).json({ message: 'Invalid notification ID' });
+    }
+
+    // Find and delete notification from work requests
+    const workRequestUpdated = await WorkRequest.updateOne(
+      { 
+        companyId, 
+        'notifications._id': notificationId 
+      },
+      { 
+        $pull: { 
+          notifications: { _id: notificationId } 
+        } 
+      }
+    );
+
+    // Find and delete notification from applications
+    const jobIds = await Job.find({ companyId }).select('_id');
+    const applicationUpdated = await Application.updateOne(
+      { 
+        jobId: { $in: jobIds }, 
+        'notifications._id': notificationId 
+      },
+      { 
+        $pull: { 
+          notifications: { _id: notificationId } 
+        } 
+      }
+    );
+
+    if (workRequestUpdated.modifiedCount === 0 && applicationUpdated.modifiedCount === 0) {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
+
+    res.status(200).json({ message: 'Notification deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting company notification:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 };
