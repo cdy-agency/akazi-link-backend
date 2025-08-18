@@ -48,9 +48,9 @@ export interface IEmployee extends IUser {
   about?: string;
   experience?: string;
   education?: string;
-  profileImage?: IFileInfo | string; // Updated to handle both file info and string
+  profileImage?: IFileInfo | string;
   skills?: string[];
-  documents?: (IFileInfo | string)[]; // Updated to handle both file info and string arrays
+  documents?: (IFileInfo | string)[];
 }
 
 export interface IJob extends Document {

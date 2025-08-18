@@ -325,11 +325,6 @@ export const deleteEmployeeNotification = async (req: Request, res: Response) =>
 
 export const uploadEmployeeDocuments = async (req: Request, res: Response) => {
   try {
-    console.log('=== uploadEmployeeDocuments DEBUG ===');
-    console.log('req.user:', req.user);
-    console.log('req.headers:', req.headers);
-    console.log('req.body:', req.body);
-    console.log('===================================');
 
     const employeeId = req.user?.id;
     if (!employeeId) {
@@ -362,11 +357,6 @@ export const uploadEmployeeDocuments = async (req: Request, res: Response) => {
 
 export const uploadProfileImage = async (req: Request, res: Response) => {
   try {
-    console.log('=== uploadProfileImage DEBUG ===');
-    console.log('req.user:', req.user);
-    console.log('req.headers:', req.headers);
-    console.log('req.body:', req.body);
-    console.log('===================================');
 
     const employeeId = req.user?.id;
     if (!employeeId) {

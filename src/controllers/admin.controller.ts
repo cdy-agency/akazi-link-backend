@@ -211,7 +211,6 @@ try {
   const companies = await Company.find().select('-password'); // Exclude passwords
   res.status(200).json({ message: 'Companies retrieved successfully', companies });
 } catch (error) {
-  console.error('Error getting companies:', error);
   res.status(500).json({ message: 'Server error' });
 }
 };
@@ -219,17 +218,10 @@ try {
 export const approveCompany = async (req: Request, res: Response) => {
 try {
   const { id } = req.params;
-  
-  console.log('Approving company with ID:', id);
-  console.log('ID type:', typeof id);
-  console.log('ID length:', id?.length);
 
   if (!Types.ObjectId.isValid(id)) {
-    console.log('Invalid ObjectId:', id);
     return res.status(400).json({ message: 'Invalid Company ID' });
   }
-
-  console.log('ObjectId is valid, searching for company...');
   
   const company = await Company.findByIdAndUpdate(
     id, 
@@ -243,10 +235,8 @@ try {
     { new: true }
   ).select('-password');
   
-  console.log('Company found:', company);
   
   if (!company) {
-    console.log('Company not found in database');
     return res.status(404).json({ message: 'Company not found' });
   }
 

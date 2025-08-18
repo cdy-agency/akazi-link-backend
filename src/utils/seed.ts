@@ -19,9 +19,7 @@ try {
       password: hashedPassword,
       role: 'superadmin',
     });
-    console.log('Default SuperAdmin user seeded successfully.');
   } else {
-    console.log('SuperAdmin user already exists.');
   }
 } catch (error) {
   console.error('Error seeding SuperAdmin user:', error);
@@ -29,9 +27,7 @@ try {
 };
 
 export const migrateCompanyStatus = async () => {
-  try {
-    console.log('Starting company status migration...');
-    
+  try {    
     // Update companies without status field to have 'pending' status
     const result = await Company.updateMany(
       { status: { $exists: false } },
@@ -55,7 +51,6 @@ export const migrateCompanyStatus = async () => {
       { $set: { isActive: true } }
     );
     
-    console.log(`Migration completed. Updated ${result.modifiedCount} companies.`);
   } catch (error) {
     console.error('Error during company status migration:', error);
   }
