@@ -11,7 +11,6 @@ import employeeRoutes from './routes/employee.routes';
 import companyRoutes from './routes/company.routes';
 import adminRoutes from './routes/admin.routes';
 import publicRoutes from './routes/public.routes';
-import usersRoutes from './routes/users.routes';
 import { errorHandler } from './middlewares/errorHandler';
 import { seedSuperAdmin } from './utils/seed';
 import { migrateCompanyStatus } from './utils/seed';
@@ -97,7 +96,6 @@ app.use('/api/auth', authRoutes);
 app.use('/api/employee', employeeRoutes);
 app.use('/api/company', companyRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api', usersRoutes); // provides /api/users with admin protection
 
 // Error handling middleware
 app.use(errorHandler);

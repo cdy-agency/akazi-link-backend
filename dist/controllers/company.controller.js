@@ -43,6 +43,7 @@ const Application_1 = __importDefault(require("../models/Application"));
 const mongoose_1 = require("mongoose");
 const WorkRequest_1 = __importDefault(require("../models/WorkRequest"));
 const authUtils_1 = require("../utils/authUtils");
+const fileUploadService_1 = require("../services/fileUploadService");
 /**
  * @swagger
  * tags:
@@ -241,19 +242,14 @@ const completeCompanyProfile = async (req, res) => {
         }
         const bodyAny = req.body;
         const about = typeof bodyAny.about === "string" ? bodyAny.about : undefined;
-        const logo = bodyAny.logo;
-        const rawDocs = bodyAny.documents;
-        const documents = Array.isArray(rawDocs)
-            ? rawDocs
-            : rawDocs
-                ? [rawDocs]
-                : undefined;
+        const logo = (0, fileUploadService_1.parseSingleFile)(bodyAny.logo);
+        const documents = (0, fileUploadService_1.parseMultipleFiles)(bodyAny.documents);
         const set = {};
         if (typeof about === "string")
             set.about = about;
         if (logo)
             set.logo = logo;
-        if (documents && Array.isArray(documents))
+        if (documents && documents.length)
             set.documents = documents;
         // Do NOT mark as complete here. Mark as pending_review if criteria met.
         // Admin approval will mark it as complete later.
@@ -567,11 +563,11 @@ const uploadLogo = async (req, res) => {
                 .status(403)
                 .json({ message: "Access Denied: Company ID not found in token" });
         }
-        const logoFile = req.body.logo;
+        const logoFile = (0, fileUploadService_1.parseSingleFile)(req.body.logo);
         if (!logoFile) {
             return res.status(400).json({ message: "No logo file uploaded" });
         }
-        const company = await Company_1.default.findByIdAndUpdate(companyId, { logo: logoFile }, { new: true, runValidators: true }).select("-password");
+        const company = await (0, fileUploadService_1.updateSingleFileField)(Company_1.default, companyId, 'logo', logoFile);
         if (!company) {
             return res.status(404).json({ message: "Company not found" });
         }
@@ -597,16 +593,11 @@ const uploadDocuments = async (req, res) => {
         console.log("=== uploadDocuments DEBUG ===");
         console.log("req.body:", JSON.stringify(req.body, null, 2));
         console.log("===================================");
-        const rawDocs = req.body.documents;
-        const documents = Array.isArray(rawDocs)
-            ? rawDocs
-            : rawDocs
-                ? [rawDocs]
-                : [];
+        const documents = (0, fileUploadService_1.parseMultipleFiles)(req.body.documents);
         if (!documents || documents.length === 0) {
             return res.status(400).json({ message: "No documents uploaded" });
         }
-        const company = await Company_1.default.findByIdAndUpdate(companyId, { $push: { documents: { $each: documents } } }, { new: true, runValidators: true }).select("-password");
+        const company = await (0, fileUploadService_1.pushMultipleFiles)(Company_1.default, companyId, 'documents', documents);
         if (!company) {
             return res.status(404).json({ message: "Company not found" });
         }
@@ -636,11 +627,11 @@ const updateLogo = async (req, res) => {
         console.log("=== updateLogo DEBUG ===");
         console.log("req.body:", JSON.stringify(req.body, null, 2));
         console.log("===================================");
-        const logoFile = req.body.logo;
+        const logoFile = (0, fileUploadService_1.parseSingleFile)(req.body.logo);
         if (!logoFile) {
             return res.status(400).json({ message: "No logo file uploaded" });
         }
-        const company = await Company_1.default.findByIdAndUpdate(companyId, { logo: logoFile }, { new: true, runValidators: true }).select("-password");
+        const company = await (0, fileUploadService_1.updateSingleFileField)(Company_1.default, companyId, 'logo', logoFile);
         if (!company) {
             return res.status(404).json({ message: "Company not found" });
         }
@@ -663,16 +654,11 @@ const updateDocuments = async (req, res) => {
                 .status(403)
                 .json({ message: "Access Denied: Company ID not found in token" });
         }
-        const rawDocs = req.body.documents;
-        const documents = Array.isArray(rawDocs)
-            ? rawDocs
-            : rawDocs
-                ? [rawDocs]
-                : [];
+        const documents = (0, fileUploadService_1.parseMultipleFiles)(req.body.documents);
         if (!documents || documents.length === 0) {
             return res.status(400).json({ message: "No documents provided" });
         }
-        const company = await Company_1.default.findByIdAndUpdate(companyId, { documents: documents }, { new: true, runValidators: true }).select("-password");
+        const company = await (0, fileUploadService_1.replaceMultipleFiles)(Company_1.default, companyId, 'documents', documents);
         if (!company) {
             return res.status(404).json({ message: "Company not found" });
         }

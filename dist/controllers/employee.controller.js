@@ -3,12 +3,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteEmployeeNotification = exports.markNotificationRead = exports.respondWorkRequest = exports.listWorkRequests = exports.getNotifications = exports.getApplications = exports.applyForJob = exports.getJobSuggestions = exports.getJobsByCategory = exports.updateEmployeeProfile = exports.getProfile = void 0;
+exports.uploadProfileImage = exports.uploadEmployeeDocuments = exports.deleteEmployeeNotification = exports.markNotificationRead = exports.respondWorkRequest = exports.listWorkRequests = exports.getNotifications = exports.getApplications = exports.applyForJob = exports.getJobSuggestions = exports.getJobsByCategory = exports.updateEmployeeProfile = exports.getProfile = void 0;
 const Employee_1 = __importDefault(require("../models/Employee"));
 const Job_1 = __importDefault(require("../models/Job"));
 const Application_1 = __importDefault(require("../models/Application"));
 const mongoose_1 = require("mongoose");
 const WorkRequest_1 = __importDefault(require("../models/WorkRequest"));
+const fileUploadService_1 = require("../services/fileUploadService");
 const getProfile = async (req, res) => {
     try {
         const employeeId = req.user?.id;
@@ -290,3 +291,49 @@ const deleteEmployeeNotification = async (req, res) => {
     }
 };
 exports.deleteEmployeeNotification = deleteEmployeeNotification;
+const uploadEmployeeDocuments = async (req, res) => {
+    try {
+        const employeeId = req.user?.id;
+        if (!employeeId) {
+            return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
+        }
+        const files = (0, fileUploadService_1.parseMultipleFiles)(req.body.documents);
+        const urls = files.map(f => f.url);
+        if (!urls.length) {
+            return res.status(400).json({ message: 'No documents uploaded' });
+        }
+        const employee = await Employee_1.default.findByIdAndUpdate(employeeId, { $push: { documents: { $each: urls } } }, { new: true, runValidators: true }).select('-password');
+        if (!employee) {
+            return res.status(404).json({ message: 'Employee not found' });
+        }
+        res.status(200).json({ message: 'Documents uploaded successfully', employee });
+    }
+    catch (error) {
+        console.error('Error uploading employee documents:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+exports.uploadEmployeeDocuments = uploadEmployeeDocuments;
+const uploadProfileImage = async (req, res) => {
+    try {
+        const employeeId = req.user?.id;
+        if (!employeeId) {
+            return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
+        }
+        const file = (0, fileUploadService_1.parseSingleFile)(req.body.image);
+        const url = file?.url;
+        if (!url) {
+            return res.status(400).json({ message: 'No image uploaded' });
+        }
+        const employee = await Employee_1.default.findByIdAndUpdate(employeeId, { $set: { profileImage: url } }, { new: true, runValidators: true }).select('-password');
+        if (!employee) {
+            return res.status(404).json({ message: 'Employee not found' });
+        }
+        res.status(200).json({ message: 'Profile image updated successfully', employee });
+    }
+    catch (error) {
+        console.error('Error uploading employee profile image:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+exports.uploadProfileImage = uploadProfileImage;

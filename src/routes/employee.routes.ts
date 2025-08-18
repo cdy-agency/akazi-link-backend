@@ -11,11 +11,18 @@ import {
   respondWorkRequest,
   markNotificationRead,
   deleteEmployeeNotification,
+  uploadEmployeeDocuments,
+  uploadProfileImage,
+  updateProfileImage,
+  deleteProfileImage,
+  updateDocuments,
+  deleteDocument,
+  resetPassword,
 } from '../controllers/employee.controller';
 import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware';
-import {uploadMultiple} from 'rod-fileupload';
+import uploadSingle, {uploadMultiple} from 'rod-fileupload';
 import cloudinary from '../config/cloudinary';
-import { uploadDocuments } from '../controllers/company.controller';
+
 
 const router = Router();
 
@@ -24,8 +31,18 @@ router.use(authorizeRoles(['employee'])); // All employee routes require employe
 
 
 router.get('/profile', getProfile);
-router.patch('/profile', uploadMultiple('image', cloudinary),updateEmployeeProfile);
-router.post('/upload/documents',uploadMultiple('documents', cloudinary), uploadDocuments);
+router.patch('/profile', updateEmployeeProfile);
+router.post('/upload/image', uploadSingle('image', cloudinary), uploadProfileImage);
+router.post('/upload/documents',uploadMultiple('documents', cloudinary), uploadEmployeeDocuments);
+
+// New file management routes
+router.patch('/update/image', uploadSingle('image', cloudinary), updateProfileImage);
+router.patch('/update/documents', uploadMultiple('documents', cloudinary), updateDocuments);
+router.delete('/delete/image', deleteProfileImage);
+router.delete('/delete/document/:index', deleteDocument);
+
+// Password reset route
+router.patch('/reset-password', resetPassword);
 
 
 router.get('/jobs', getJobsByCategory);

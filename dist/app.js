@@ -15,7 +15,6 @@ const employee_routes_1 = __importDefault(require("./routes/employee.routes"));
 const company_routes_1 = __importDefault(require("./routes/company.routes"));
 const admin_routes_1 = __importDefault(require("./routes/admin.routes"));
 const public_routes_1 = __importDefault(require("./routes/public.routes"));
-const users_routes_1 = __importDefault(require("./routes/users.routes"));
 const errorHandler_1 = require("./middlewares/errorHandler");
 const seed_1 = require("./utils/seed");
 const seed_2 = require("./utils/seed");
@@ -27,12 +26,19 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/joblink';
 mongoose_1.default.connect(MONGO_URI)
     .then(() => {
     console.log('MongoDB connected successfully');
+    console.log('MongoDB URI:', MONGO_URI);
     (0, seed_1.seedSuperAdmin)(); // Seed SuperAdmin after successful connection
     (0, seed_2.migrateCompanyStatus)(); // Migrate existing companies to new status fields
 })
-    .catch((err) => console.error('MongoDB connection error:', err));
+    .catch((err) => {
+    console.error('MongoDB connection error:', err);
+    console.error('MongoDB URI used:', MONGO_URI);
+});
 // Middleware
-app.use((0, cors_1.default)());
+app.use((0, cors_1.default)({
+    origin: process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : ['http://localhost:3000', 'https://job-platform-rouge.vercel.app'],
+    credentials: true
+}));
 app.use(express_1.default.json());
 // Swagger setup
 const swaggerOptions = {
@@ -84,7 +90,6 @@ app.use('/api/auth', auth_routes_1.default);
 app.use('/api/employee', employee_routes_1.default);
 app.use('/api/company', company_routes_1.default);
 app.use('/api/admin', admin_routes_1.default);
-app.use('/api', users_routes_1.default); // provides /api/users with admin protection
 // Error handling middleware
 app.use(errorHandler_1.errorHandler);
 app.listen(PORT, () => {

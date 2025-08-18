@@ -4,6 +4,7 @@ import { IUser } from '../types/models';
 const UserSchema: Schema = new Schema(
 {
   email: { type: String, required: true, unique: true },
+  image: { type: String },
   password: { type: String, required: true },
   role: { type: String, enum: ['employee', 'company', 'superadmin'], required: true },
 },

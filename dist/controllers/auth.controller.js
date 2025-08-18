@@ -8,6 +8,7 @@ const authUtils_1 = require("../utils/authUtils");
 const Employee_1 = __importDefault(require("../models/Employee"));
 const Company_1 = __importDefault(require("../models/Company"));
 const User_1 = __importDefault(require("../models/User"));
+const fileUploadService_1 = require("../services/fileUploadService");
 /**
 * @swagger
 * tags:
@@ -171,7 +172,8 @@ exports.registerEmployee = registerEmployee;
 */
 const registerCompany = async (req, res) => {
     try {
-        const { companyName, email, password, location, phoneNumber, website, logo } = req.body;
+        const { companyName, email, password, location, phoneNumber, website } = req.body;
+        const logo = (0, fileUploadService_1.parseSingleFile)(req.body.logo);
         if (!companyName || !email || !password) {
             return res.status(400).json({ message: 'Please provide company name, email, and password' });
         }
@@ -190,7 +192,7 @@ const registerCompany = async (req, res) => {
             website,
             // Store full file info object when provided by rod-fileupload middleware.
             // If a legacy string URL is provided, skip setting logo to avoid schema cast errors.
-            ...(logo && typeof logo === 'object' ? { logo } : {}),
+            ...(logo ? { logo } : {}),
             isApproved: false,
             status: 'pending',
             isActive: true,
@@ -199,7 +201,7 @@ const registerCompany = async (req, res) => {
     }
     catch (error) {
         console.error('Error registering company:', error);
-        res.status(500).json({ message: 'Server error during company registration', error });
+        res.status(500).json({ message: 'Server error during company registration' });
     }
 };
 exports.registerCompany = registerCompany;
@@ -263,16 +265,21 @@ exports.registerCompany = registerCompany;
 */
 const login = async (req, res) => {
     try {
+        console.log('Login attempt for email:', req.body.email);
         const { email, password } = req.body;
         if (!email || !password) {
+            console.log('Missing email or password');
             return res.status(400).json({ message: 'Please provide email and password' });
         }
         const user = await User_1.default.findOne({ email });
         if (!user) {
+            console.log('User not found for email:', email);
             return res.status(400).json({ message: 'Invalid credentials' });
         }
+        console.log('User found, role:', user.role);
         const isMatch = await (0, authUtils_1.comparePasswords)(password, user.password);
         if (!isMatch) {
+            console.log('Password mismatch for user:', email);
             return res.status(400).json({ message: 'Invalid credentials' });
         }
         let responsePayload = {
@@ -282,13 +289,14 @@ const login = async (req, res) => {
         if (user.role === 'company') {
             const company = await Company_1.default.findById(user._id);
             if (!company) {
+                console.log('Company profile not found for user:', email);
                 return res.status(400).json({ message: 'Company profile not found' });
             }
             responsePayload.isApproved = company.isApproved;
-            // If company is not approved, they can log in but won't have full access
-            // The authorizeRoles middleware will handle restricting access to full functionality
+            console.log('Company approval status:', company.isApproved);
         }
         const token = (0, authUtils_1.generateToken)(responsePayload);
+        console.log('Token generated successfully for user:', email);
         res.status(200).json({
             message: 'Login successful',
             token,
@@ -297,7 +305,12 @@ const login = async (req, res) => {
         });
     }
     catch (error) {
-        res.status(500).json({ message: 'Server error during login', error });
+        console.error('Login error details:', {
+            message: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined,
+            email: req.body?.email
+        });
+        res.status(500).json({ message: 'Server error during login' });
     }
 };
 exports.login = login;

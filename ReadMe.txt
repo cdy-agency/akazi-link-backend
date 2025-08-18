@@ -3,6 +3,7 @@ Akazi Link Backend - API Models and Relationships (for Frontend Developers)
 Overview
 - This document summarizes the core backend data models, their relationships, and the primary REST endpoints you will use from the frontend.
 - Tech stack: Express + Mongoose (MongoDB). Auth uses JWT. File uploads use rod-fileupload → Cloudinary.
+- Swagger docs: /api-docs (UI) and /api-docs/swagger.json (OpenAPI spec).
 
 Auth Basics
 - Include Authorization: Bearer <token> for authenticated routes.
@@ -59,10 +60,12 @@ Job Model
   - title: string (required)
   - description: string (required)
   - skills: string[]
-  - image: string (Cloudinary URL saved from rod-fileupload)
+- location?: string
+  - image: FileInfo (from rod-fileupload)
   - experience?: string
   - employmentType: 'fulltime' | 'part-time' | 'internship' (required)
-  - salary?: string
+  - salaryMin?: string
+- salaryMax?: string
   - category: string
   - benefits?: string[]
   - companyId: ObjectId → Company
@@ -95,12 +98,19 @@ Relationships
 
 Key Endpoints (paths are prefixed with /api)
 
+Public
+- GET /jobs
+- GET /jobs/:id
+- GET /users
+- GET /health
+
 Auth
 - POST /auth/register/employee
 - POST /auth/register/company
   - Uses rod-fileupload with field "logo" to optionally upload and attach req.body.logo (FileInfo). If omitted, logo remains unset.
 - POST /auth/login
 - PATCH /auth/company/complete (company can submit about + documents before approval)
+  - Also available: PATCH /company/complete-profile (preferred) with multipart form data: about, logo?, documents[]
 
 Company (requires role=company; some actions require approval)
 - GET /company/profile
@@ -124,26 +134,38 @@ Company (requires role=company; some actions require approval)
   - POST  /company/upload/documents      (field: documents)   → pushes FileInfo[] into company.documents
   - PATCH /company/update/logo           (field: logo)        → replaces company.logo
   - PATCH /company/update/documents      (field: documents)   → replaces company.documents entirely
-  - DELETE /company/delete/logo
-  - DELETE /company/delete/document/:index
+- DELETE /company/delete/logo
+- DELETE /company/delete/document/:index
+  - index is 0-based
+- GET    /company/notifications
+- PATCH  /company/notifications/:notificationId/read
+- DELETE /company/notifications/:notificationId
 - Jobs:
   - POST /company/job (field: image) → create job with image.url (requires admin approval)
   - GET  /company/jobs (requires admin approval)
   - GET  /company/applicants/:jobId (requires admin approval)
   - PATCH /company/applications/:applicationId/status (requires admin approval)
+  - body: { status: 'pending' | 'reviewed' | 'interview' | 'hired' | 'rejected' }
 - Directory & requests:
   - GET  /company/employees
-  - POST /company/work-requests
+- POST /company/work-requests
+  - body: { employeeId: string, message?: string }
 
 Employee (requires role=employee)
 - GET  /employee/profile
 - PATCH /employee/profile
+- POST /employee/upload/image (field: image)
+- POST /employee/upload/documents (field: documents)
 - GET  /employee/jobs?category=IT%20%26%20Software
 - GET  /employee/suggestions?category=IT%20%26%20Software
 - POST /employee/apply/:jobId
   - body: { skills: string[], experience: string, appliedVia: 'normal' | 'whatsapp' | 'referral' }
+- POST /employee/upload/documents (field: documents)
+  - accepts either strings (URLs) or FileInfo and stores URLs
 - GET  /employee/applications
 - GET  /employee/notifications
+- PATCH /employee/notifications/:notificationId/read
+- DELETE /employee/notifications/:notificationId
 - GET  /employee/work-requests
 - PATCH /employee/work-requests/:id/respond
   - body: { action: 'accept' | 'reject' }
@@ -156,7 +178,6 @@ Notes for Employee UI
 Admin (requires role=superadmin)
 - POST  /admin/login
 - PATCH /admin/update-password (field: image optional)
-- GET   /admin/employees
 - GET   /admin/companies
 - Company account state:
   - PATCH /admin/company/:id/approve
@@ -169,6 +190,51 @@ Admin (requires role=superadmin)
   - GET   /admin/company/:id → fetch full company details (about, documents, contact info, etc.) for review UI
   - PATCH /admin/company/:id/approve-profile → sets isApproved=true, status=approved, profileCompletionStatus=complete, profileCompletedAt set
   - PATCH /admin/company/:id/reject-profile  → sets status=rejected, isActive=false, profileCompletionStatus=incomplete, requires rejectionReason
+- Admin notifications:
+  - GET    /admin/notifications
+  - PATCH  /admin/notifications/:notificationId/read
+  - DELETE /admin/notifications/:notificationId
+
+Reusable Upload Service (for devs)
+- Shared parser and updater used across controllers: `src/services/fileUploadService.ts`
+  - parseSingleFile(input): accepts a rod-fileupload FileInfo-like object and returns a normalized FileInfo or undefined
+  - parseMultipleFiles(input): accepts a single or array and returns FileInfo[]
+  - updateSingleFileField(model, id, path, file): sets a single FileInfo field
+  - pushMultipleFiles(model, id, path, files): appends multiple FileInfo to an array field
+  - replaceMultipleFiles(model, id, path, files): replaces an array field with FileInfo[]
+
+Frontend usage with rod-fileupload
+- Always send multipart/form-data; field names must match exactly:
+  - Company:
+    - Single: `logo` to /company/upload/logo or /company/update/logo
+    - Multiple: `documents` to /company/upload/documents or /company/update/documents
+  - Employee:
+    - Single: `image` to /employee/upload/image
+    - Multiple: `documents` to /employee/upload/documents
+- rod-fileupload attaches parsed file info in req.body keys with this shape (example):
+  {
+    url: string,
+    public_id: string,
+    format: string,
+    size: number,
+    name: string,
+    type: string,
+    time: string
+  }
+
+Quick examples (fetch)
+- Upload employee image:
+  const fd = new FormData();
+  fd.append('image', file);
+  await fetch('/api/employee/upload/image', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
+- Upload multiple employee documents:
+  const fd = new FormData();
+  files.forEach(f => fd.append('documents', f));
+  await fetch('/api/employee/upload/documents', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
+
+Auth tokens
+- Employee endpoints require a token with role=employee
+- Company endpoints require a token with role=company; some require approval
 
 Frontend Integration Notes
 - File Uploads (rod-fileupload):

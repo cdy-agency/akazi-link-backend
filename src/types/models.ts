@@ -48,9 +48,9 @@ export interface IEmployee extends IUser {
   about?: string;
   experience?: string;
   education?: string;
-  profileImage?: string;
+  profileImage?: IFileInfo | string; // Updated to handle both file info and string
   skills?: string[];
-  documents?: string[];
+  documents?: (IFileInfo | string)[]; // Updated to handle both file info and string arrays
 }
 
 export interface IJob extends Document {
@@ -58,7 +58,7 @@ export interface IJob extends Document {
   description: string;
   skills: string[];
   location: string,
-  image: String;
+  image: IFileInfo;
   experience: string;
   employmentType: "fulltime" | "part-time" | "internship";
     category: string;
@@ -83,7 +83,7 @@ export interface IApplication extends Document {
   employeeId: Types.ObjectId;
   skills?: string[];
   experience?: string;
-  resume: string,
+  resume?: string,
   appliedVia: "normal" | "whatsapp" | "referral";
   status: "pending" | "reviewed" | "interview" | "hired" | "rejected";
   notifications: INotification[];
