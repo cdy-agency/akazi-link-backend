@@ -209,7 +209,6 @@ const getCompanies = async (req, res) => {
         res.status(200).json({ message: 'Companies retrieved successfully', companies });
     }
     catch (error) {
-        console.error('Error getting companies:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -217,9 +216,6 @@ exports.getCompanies = getCompanies;
 const approveCompany = async (req, res) => {
     try {
         const { id } = req.params;
-        console.log('Approving company with ID:', id);
-        console.log('ID type:', typeof id);
-        console.log('ID length:', id?.length);
         if (!mongoose_1.Types.ObjectId.isValid(id)) {
             console.log('Invalid ObjectId:', id);
             return res.status(400).json({ message: 'Invalid Company ID' });
@@ -232,15 +228,12 @@ const approveCompany = async (req, res) => {
             profileCompletionStatus: 'complete',
             profileCompletedAt: new Date()
         }, { new: true }).select('-password');
-        console.log('Company found:', company);
         if (!company) {
-            console.log('Company not found in database');
             return res.status(404).json({ message: 'Company not found' });
         }
         res.status(200).json({ message: 'Company approved successfully', company });
     }
     catch (error) {
-        console.error('Error approving company:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -445,7 +438,6 @@ const enableCompany = async (req, res) => {
         res.status(200).json({ message: 'Company enabled successfully', updatedCompany });
     }
     catch (error) {
-        console.error('Error enabling company:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -503,7 +495,6 @@ const deleteCompany = async (req, res) => {
         res.status(200).json({ message: 'Company deleted successfully' });
     }
     catch (error) {
-        console.error('Error deleting company:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

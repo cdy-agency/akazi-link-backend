@@ -373,9 +373,6 @@ export const postJob = async (req: Request, res: Response) => {
       applicationDeadline,
       companyId,
     });
-
-    console.log("created Job is:", job);
-
     res.status(201).json({ message: "Job posted successfully", job });
   } catch (error) {
     console.error("Error posting job:", error);
@@ -537,7 +534,7 @@ export const browseEmployees = async (req: Request, res: Response) => {
     // Lazy import to avoid circular
     const { default: Employee } = await import("../models/Employee");
     const employees = await Employee.find().select(
-      "name email phoneNumber jobPreferences skills"
+      "-password -role"
     );
     res.status(200).json({ message: "Employees retrieved", employees });
   } catch (error) {
@@ -620,10 +617,6 @@ export const uploadDocuments = async (req: Request, res: Response) => {
         .json({ message: "Access Denied: Company ID not found in token" });
     }
 
-    console.log("=== uploadDocuments DEBUG ===");
-    console.log("req.body:", JSON.stringify(req.body, null, 2));
-    console.log("===================================");
-
     const documents = parseMultipleFiles((req.body as any).documents);
     if (!documents || documents.length === 0) {
       return res.status(400).json({ message: "No documents uploaded" });
@@ -658,10 +651,6 @@ export const updateLogo = async (req: Request, res: Response) => {
         .status(403)
         .json({ message: "Access Denied: Company ID not found in token" });
     }
-
-    console.log("=== updateLogo DEBUG ===");
-    console.log("req.body:", JSON.stringify(req.body, null, 2));
-    console.log("===================================");
 
     const logoFile = parseSingleFile((req.body as any).logo);
     if (!logoFile) {
