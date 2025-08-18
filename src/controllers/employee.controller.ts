@@ -6,6 +6,7 @@ import Application from '../models/Application';
 import { Types } from 'mongoose';
 import WorkRequest from '../models/WorkRequest';
 import { parseSingleFile, parseMultipleFiles } from '../services/fileUploadService';
+import { comparePasswords, hashPassword } from '../utils/authUtils';
 
 
 export const getProfile = async (req: Request, res: Response) => {
@@ -324,21 +325,27 @@ export const deleteEmployeeNotification = async (req: Request, res: Response) =>
 
 export const uploadEmployeeDocuments = async (req: Request, res: Response) => {
   try {
+    console.log('=== uploadEmployeeDocuments DEBUG ===');
+    console.log('req.user:', req.user);
+    console.log('req.headers:', req.headers);
+    console.log('req.body:', req.body);
+    console.log('===================================');
+
     const employeeId = req.user?.id;
     if (!employeeId) {
       return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
     }
 
     const files = parseMultipleFiles((req.body as any).documents);
-    const urls = files.map(f => f.url);
-
-    if (!urls.length) {
+    
+    if (!files.length) {
       return res.status(400).json({ message: 'No documents uploaded' });
     }
 
+    // Store the complete file information objects
     const employee = await Employee.findByIdAndUpdate(
       employeeId,
-      { $push: { documents: { $each: urls } } },
+      { $push: { documents: { $each: files } } },
       { new: true, runValidators: true }
     ).select('-password');
 
@@ -355,21 +362,58 @@ export const uploadEmployeeDocuments = async (req: Request, res: Response) => {
 
 export const uploadProfileImage = async (req: Request, res: Response) => {
   try {
+    console.log('=== uploadProfileImage DEBUG ===');
+    console.log('req.user:', req.user);
+    console.log('req.headers:', req.headers);
+    console.log('req.body:', req.body);
+    console.log('===================================');
+
     const employeeId = req.user?.id;
     if (!employeeId) {
       return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
     }
 
     const file = parseSingleFile((req.body as any).image);
-    const url = file?.url;
-
-    if (!url) {
+    
+    if (!file) {
       return res.status(400).json({ message: 'No image uploaded' });
     }
 
+    // Store the complete file information object
     const employee = await Employee.findByIdAndUpdate(
       employeeId,
-      { $set: { profileImage: url } },
+      { $set: { profileImage: file } },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    res.status(200).json({ message: 'Profile image uploaded successfully', employee });
+  } catch (error) {
+    console.error('Error uploading employee profile image:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const updateProfileImage = async (req: Request, res: Response) => {
+  try {
+    const employeeId = req.user?.id;
+    if (!employeeId) {
+      return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
+    }
+
+    const file = parseSingleFile((req.body as any).image);
+    
+    if (!file) {
+      return res.status(400).json({ message: 'No image uploaded' });
+    }
+
+    // Store the complete file information object
+    const employee = await Employee.findByIdAndUpdate(
+      employeeId,
+      { $set: { profileImage: file } },
       { new: true, runValidators: true }
     ).select('-password');
 
@@ -379,7 +423,145 @@ export const uploadProfileImage = async (req: Request, res: Response) => {
 
     res.status(200).json({ message: 'Profile image updated successfully', employee });
   } catch (error) {
-    console.error('Error uploading employee profile image:', error);
+    console.error('Error updating employee profile image:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const deleteProfileImage = async (req: Request, res: Response) => {
+  try {
+    const employeeId = req.user?.id;
+    if (!employeeId) {
+      return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
+    }
+
+    const employee = await Employee.findByIdAndUpdate(
+      employeeId,
+      { $unset: { profileImage: 1 } },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    res.status(200).json({ message: 'Profile image deleted successfully', employee });
+  } catch (error) {
+    console.error('Error deleting employee profile image:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const updateDocuments = async (req: Request, res: Response) => {
+  try {
+    const employeeId = req.user?.id;
+    if (!employeeId) {
+      return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
+    }
+
+    const files = parseMultipleFiles((req.body as any).documents);
+    
+    if (!files.length) {
+      return res.status(400).json({ message: 'No documents provided' });
+    }
+
+    // Store the complete file information objects
+    const employee = await Employee.findByIdAndUpdate(
+      employeeId,
+      { $set: { documents: files } },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    res.status(200).json({ message: 'Documents updated successfully', employee });
+  } catch (error) {
+    console.error('Error updating employee documents:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const deleteDocument = async (req: Request, res: Response) => {
+  try {
+    const employeeId = req.user?.id;
+    const { index } = req.params;
+
+    if (!employeeId) {
+      return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
+    }
+
+    const documentIndex = parseInt(index);
+    if (isNaN(documentIndex) || documentIndex < 0) {
+      return res.status(400).json({ message: 'Invalid document index' });
+    }
+
+    const employee = await Employee.findById(employeeId);
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    if (!employee.documents || documentIndex >= employee.documents.length) {
+      return res.status(400).json({ message: 'Document index out of range' });
+    }
+
+    employee.documents.splice(documentIndex, 1);
+    await employee.save();
+
+    res.status(200).json({ message: 'Document deleted successfully', employee });
+  } catch (error) {
+    console.error('Error deleting employee document:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const employeeId = req.user?.id;
+    const { oldPassword, newPassword } = req.body;
+
+    if (!employeeId) {
+      return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
+    }
+
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ message: 'Old password and new password are required' });
+    }
+
+    const employee = await Employee.findById(employeeId);
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    // Check if employee has a password (should always exist for employees)
+    if (!employee.password) {
+      return res.status(400).json({ message: 'Employee password not found' });
+    }
+
+    // Verify old password
+    const isMatch = await comparePasswords(oldPassword, employee.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid old password' });
+    }
+
+    // Hash new password
+    const hashedPassword = await hashPassword(newPassword);
+
+    // Update password
+    const updatedEmployee = await Employee.findByIdAndUpdate(
+      employeeId,
+      { $set: { password: hashedPassword } },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!updatedEmployee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    res.status(200).json({ message: 'Password reset successfully', employee: updatedEmployee });
+  } catch (error) {
+    console.error('Error resetting employee password:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

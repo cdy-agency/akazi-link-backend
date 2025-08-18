@@ -10,11 +10,20 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
 const authHeader = req.headers['authorization'];
 const token = authHeader && authHeader.split(' ')[1];
 
+console.log('=== authenticateToken DEBUG ===');
+console.log('authHeader:', authHeader);
+console.log('token:', token ? 'present' : 'missing');
+console.log('===================================');
+
 if (!token) {
   return res.status(401).json({ message: 'Access Denied: No token provided' });
 }
 
 const decoded = verifyToken(token);
+
+console.log('=== Token Verification DEBUG ===');
+console.log('decoded:', decoded);
+console.log('===================================');
 
 if (!decoded || typeof decoded === 'string') {
   return res.status(403).json({ message: 'Access Denied: Invalid token' });
@@ -30,11 +39,21 @@ next();
 */
 export const authorizeRoles = (allowedRoles: string[]) => {
 return async (req: Request, res: Response, next: NextFunction) => {
+  console.log('=== authorizeRoles DEBUG ===');
+  console.log('req.user:', req.user);
+  console.log('allowedRoles:', allowedRoles);
+  console.log('===================================');
+
   if (!req.user) {
     return res.status(403).json({ message: 'Access Denied: User not authenticated' });
   }
 
   const { id, role } = req.user;
+
+  console.log('=== Role Check DEBUG ===');
+  console.log('user id:', id);
+  console.log('user role:', role);
+  console.log('===================================');
 
   if (!allowedRoles.includes(role)) {
     return res.status(403).json({ message: 'Access Denied: Insufficient permissions' });

@@ -13,6 +13,11 @@ import {
   deleteEmployeeNotification,
   uploadEmployeeDocuments,
   uploadProfileImage,
+  updateProfileImage,
+  deleteProfileImage,
+  updateDocuments,
+  deleteDocument,
+  resetPassword,
 } from '../controllers/employee.controller';
 import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware';
 import uploadSingle, {uploadMultiple} from 'rod-fileupload';
@@ -29,6 +34,15 @@ router.get('/profile', getProfile);
 router.patch('/profile', updateEmployeeProfile);
 router.post('/upload/image', uploadSingle('image', cloudinary), uploadProfileImage);
 router.post('/upload/documents',uploadMultiple('documents', cloudinary), uploadEmployeeDocuments);
+
+// New file management routes
+router.patch('/update/image', uploadSingle('image', cloudinary), updateProfileImage);
+router.patch('/update/documents', uploadMultiple('documents', cloudinary), updateDocuments);
+router.delete('/delete/image', deleteProfileImage);
+router.delete('/delete/document/:index', deleteDocument);
+
+// Password reset route
+router.patch('/reset-password', resetPassword);
 
 
 router.get('/jobs', getJobsByCategory);

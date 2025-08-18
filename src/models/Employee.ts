@@ -12,9 +12,9 @@ const EmployeeSchema: Schema = new Schema(
   about: { type: String },
   experience: { type: String },
   education: { type: String },
-  profileImage: { type: String },
+  profileImage: { type: Schema.Types.Mixed }, // Can be string or IFileInfo object
   skills: { type: [String], default: [] },
-  documents: { type: [String], default: [] },
+  documents: { type: [Schema.Types.Mixed], default: [] }, // Can be string[] or IFileInfo[]
 },
 { timestamps: true }
 );
