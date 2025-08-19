@@ -34,7 +34,7 @@ mongoose.connect(MONGO_URI)
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : ['http://localhost:3000', 'https://job-platform-rouge.vercel.app'],
+  origin: process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : ['http://localhost:3000'],
   credentials: true
 }));
 app.use(express.json());
