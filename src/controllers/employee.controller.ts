@@ -6,7 +6,10 @@ import Application from '../models/Application';
 import { Types } from 'mongoose';
 import WorkRequest from '../models/WorkRequest';
 import { parseSingleFile, parseMultipleFiles } from '../services/fileUploadService';
+import cloudinary from "../config/cloudinary";
+import { v2 as cloudinarySdk } from "cloudinary";
 import { comparePasswords, hashPassword } from '../utils/authUtils';
+import User from '../models/User';
 
 
 export const getProfile = async (req: Request, res: Response) => {
@@ -120,7 +123,7 @@ try {
 export const applyForJob = async (req: Request, res: Response) => {
 try {
   const { jobId } = req.params;
-  const { skills, experience, appliedVia } = req.body;
+  const { coverLetter, experience, appliedVia, message } = req.body as any;
   const employeeId = req.user?.id;
 
   if (!employeeId) {
@@ -144,9 +147,9 @@ try {
   const application = await Application.create({
     jobId,
     employeeId,
-    skills,
+    skills: [],
     experience,
-    
+    coverLetter: typeof coverLetter === 'string' ? coverLetter : (typeof message === 'string' ? message : undefined),
     appliedVia: appliedVia || 'normal',
     status: 'pending',
   });
@@ -425,6 +428,22 @@ export const deleteProfileImage = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
     }
 
+    const current = await Employee.findById(employeeId).select('profileImage');
+    if (!current) return res.status(404).json({ message: 'Employee not found' });
+    const publicId = (current as any)?.profileImage?.public_id as string | undefined;
+    if (publicId) {
+      try {
+        cloudinarySdk.config({
+          cloud_name: cloudinary.cloudName,
+          api_key: cloudinary.apiKey,
+          api_secret: cloudinary.apiSecret,
+        });
+        await cloudinarySdk.uploader.destroy(publicId);
+      } catch (e) {
+        // ignore errors
+      }
+    }
+
     const employee = await Employee.findByIdAndUpdate(
       employeeId,
       { $unset: { profileImage: 1 } },
@@ -496,6 +515,21 @@ export const deleteDocument = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Document index out of range' });
     }
 
+    const doc: any = (employee.documents as any[])[documentIndex];
+    const publicId: string | undefined = doc && typeof doc === 'object' ? doc.public_id : undefined;
+    if (publicId) {
+      try {
+        cloudinarySdk.config({
+          cloud_name: cloudinary.cloudName,
+          api_key: cloudinary.apiKey,
+          api_secret: cloudinary.apiSecret,
+        });
+        await cloudinarySdk.uploader.destroy(publicId);
+      } catch (e) {
+        // ignore errors
+      }
+    }
+
     employee.documents.splice(documentIndex, 1);
     await employee.save();
 
@@ -552,6 +586,58 @@ export const resetPassword = async (req: Request, res: Response) => {
     res.status(200).json({ message: 'Password reset successfully', employee: updatedEmployee });
   } catch (error) {
     console.error('Error resetting employee password:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const deactivateEmployeeAccount = async (req: Request, res: Response) => {
+  try {
+    const employeeId = req.user?.id;
+    if (!employeeId) return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
+    const updated = await User.findByIdAndUpdate(
+      employeeId,
+      { $set: { isActive: false } },
+      { new: true }
+    ).select('-password');
+    if (!updated) return res.status(404).json({ message: 'Employee not found' });
+    res.status(200).json({ message: 'Account deactivated', user: updated });
+  } catch (error) {
+    console.error('Error deactivating employee:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const activateEmployeeAccount = async (req: Request, res: Response) => {
+  try {
+    const employeeId = req.user?.id;
+    if (!employeeId) return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
+    const updated = await User.findByIdAndUpdate(
+      employeeId,
+      { $set: { isActive: true } },
+      { new: true }
+    ).select('-password');
+    if (!updated) return res.status(404).json({ message: 'Employee not found' });
+    res.status(200).json({ message: 'Account activated', user: updated });
+  } catch (error) {
+    console.error('Error activating employee:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const deleteEmployeeAccount = async (req: Request, res: Response) => {
+  try {
+    const employeeId = req.user?.id;
+    if (!employeeId) return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
+    // Soft-delete: set isActive false. For full removal, we'd remove discriminator docs as well.
+    const updated = await User.findByIdAndUpdate(
+      employeeId,
+      { $set: { isActive: false } },
+      { new: true }
+    ).select('-password');
+    if (!updated) return res.status(404).json({ message: 'Employee not found' });
+    res.status(200).json({ message: 'Account deleted', user: updated });
+  } catch (error) {
+    console.error('Error deleting employee:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

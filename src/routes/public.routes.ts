@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { listPublicJobs, listPublicUsers, getPublicJobById } from '../controllers/public.controller';
+import { listPublicJobs, listPublicUsers, getPublicJobById, getPublicUserById } from '../controllers/public.controller';
 
 const router = Router();
 
@@ -59,6 +59,7 @@ router.get('/jobs/:id', getPublicJobById);
  *         description: Server error
  */
 router.get('/users', listPublicUsers);
+router.get('/users/:id', getPublicUserById)
 
 /**
  * @swagger

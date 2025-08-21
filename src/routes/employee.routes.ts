@@ -18,8 +18,11 @@ import {
   updateDocuments,
   deleteDocument,
   resetPassword,
+  deactivateEmployeeAccount,
+  activateEmployeeAccount,
+  deleteEmployeeAccount,
 } from '../controllers/employee.controller';
-import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware';
+import { authenticateToken, authorizeRoles, ensureEmployeeActive } from '../middlewares/authMiddleware';
 import uploadSingle, {uploadMultiple} from 'rod-fileupload';
 import cloudinary from '../config/cloudinary';
 
@@ -31,15 +34,15 @@ router.use(authorizeRoles(['employee'])); // All employee routes require employe
 
 
 router.get('/profile', getProfile);
-router.patch('/profile', updateEmployeeProfile);
-router.post('/upload/image', uploadSingle('image', cloudinary), uploadProfileImage);
-router.post('/upload/documents',uploadMultiple('documents', cloudinary), uploadEmployeeDocuments);
+router.patch('/profile', ensureEmployeeActive(), updateEmployeeProfile);
+router.post('/upload/image', ensureEmployeeActive(), uploadSingle('image', cloudinary), uploadProfileImage);
+router.post('/upload/documents', ensureEmployeeActive(), uploadMultiple('documents', cloudinary), uploadEmployeeDocuments);
 
 // New file management routes
-router.patch('/update/image', uploadSingle('image', cloudinary), updateProfileImage);
-router.patch('/update/documents', uploadMultiple('documents', cloudinary), updateDocuments);
-router.delete('/delete/image', deleteProfileImage);
-router.delete('/delete/document/:index', deleteDocument);
+router.patch('/update/image', ensureEmployeeActive(), uploadSingle('image', cloudinary), updateProfileImage);
+router.patch('/update/documents', ensureEmployeeActive(), uploadMultiple('documents', cloudinary), updateDocuments);
+router.delete('/delete/image', ensureEmployeeActive(), deleteProfileImage);
+router.delete('/delete/document/:index', ensureEmployeeActive(), deleteDocument);
 
 // Password reset route
 router.patch('/reset-password', resetPassword);
@@ -50,7 +53,7 @@ router.get('/jobs', getJobsByCategory);
 
 router.get('/suggestions', getJobSuggestions);
 
-router.post('/apply/:jobId', applyForJob);
+router.post('/apply/:jobId', ensureEmployeeActive(), applyForJob);
 
 
 router.get('/applications', getApplications);
@@ -58,6 +61,11 @@ router.get('/applications', getApplications);
 router.get('/notifications', getNotifications);
 router.patch('/notifications/:notificationId/read', markNotificationRead);
 router.delete('/notifications/:notificationId', deleteEmployeeNotification);
+
+// Account lifecycle
+router.patch('/deactivate', deactivateEmployeeAccount);
+router.patch('/activate', activateEmployeeAccount);
+router.delete('/delete', deleteEmployeeAccount);
 
 // Work requests
 router.get('/work-requests', listWorkRequests);

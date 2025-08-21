@@ -84,6 +84,7 @@ export interface IApplication extends Document {
   skills?: string[];
   experience?: string;
   resume?: string,
+  coverLetter?: string,
   appliedVia: "normal" | "whatsapp" | "referral";
   status: "pending" | "reviewed" | "interview" | "hired" | "rejected";
   notifications: INotification[];

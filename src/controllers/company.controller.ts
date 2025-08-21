@@ -8,6 +8,9 @@ import WorkRequest from "../models/WorkRequest";
 import { comparePasswords, hashPassword } from "../utils/authUtils";
 import { IFileInfo } from "../types/models";
 import { parseSingleFile, parseMultipleFiles, updateSingleFileField, pushMultipleFiles, replaceMultipleFiles } from '../services/fileUploadService';
+import cloudinary from "../config/cloudinary";
+import { v2 as cloudinarySdk } from "cloudinary";
+import { parseSingleFile as parseSingleFileUpload } from '../services/fileUploadService';
 
 /**
  * @swagger
@@ -381,6 +384,139 @@ export const postJob = async (req: Request, res: Response) => {
 };
 
 /**
+ * Update an existing job. Only fields provided will be updated.
+ * Supports image replacement via rod-fileupload and coerces array fields.
+ */
+export const updateJob = async (req: Request, res: Response) => {
+  try {
+    const companyId = req.user?.id;
+    const { id } = req.params as { id: string };
+    if (!companyId) {
+      return res
+        .status(403)
+        .json({ message: "Access Denied: Company ID not found in token" });
+    }
+    if (!Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid Job ID" });
+    }
+
+    const job = await Job.findById(id);
+    if (!job) return res.status(404).json({ message: "Job not found" });
+    if (job.companyId.toString() !== companyId) {
+      return res
+        .status(403)
+        .json({ message: "Access Denied: You do not own this job" });
+    }
+
+    const bodyAny = req.body as any;
+    const set: any = {};
+
+    const maybeArray = (value: unknown): string[] | undefined => {
+      if (typeof value === 'undefined') return undefined;
+      if (Array.isArray(value)) return value.filter(v => typeof v === 'string');
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed) return [];
+        return [trimmed];
+      }
+      return [];
+    };
+
+    const fields = [
+      'title',
+      'description',
+      'location',
+      'experience',
+      'employmentType',
+      'salaryMin',
+      'salaryMax',
+      'category',
+      'applicationDeadline',
+    ] as const;
+
+    for (const f of fields) {
+      if (typeof bodyAny[f] !== 'undefined') set[f] = bodyAny[f];
+    }
+
+    const skills = maybeArray(bodyAny.skills);
+    if (typeof skills !== 'undefined') set.skills = skills;
+    const responsibilities = maybeArray(bodyAny.responsibilities);
+    if (typeof responsibilities !== 'undefined') set.responsibilities = responsibilities;
+    const benefits = maybeArray(bodyAny.benefits);
+    if (typeof benefits !== 'undefined') set.benefits = benefits;
+
+    // Image (if provided by rod-fileupload, it'll be an object with url)
+    const image = parseSingleFileUpload(bodyAny.image);
+    if (image) set.image = image;
+
+    const updated = await Job.findByIdAndUpdate(
+      id,
+      { $set: set },
+      { new: true, runValidators: true }
+    );
+
+    res.status(200).json({ message: 'Job updated successfully', job: updated });
+  } catch (error) {
+    console.error('Error updating job:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/** Activate/deactivate/delete company account */
+export const deactivateCompanyAccount = async (req: Request, res: Response) => {
+  try {
+    const companyId = req.user?.id;
+    if (!companyId) return res.status(403).json({ message: 'Access Denied' });
+    const company = await Company.findByIdAndUpdate(
+      companyId,
+      { $set: { isActive: false, status: 'disabled', disabledAt: new Date() } },
+      { new: true, runValidators: true }
+    ).select('-password');
+    if (!company) return res.status(404).json({ message: 'Company not found' });
+    res.status(200).json({ message: 'Company deactivated', company });
+  } catch (e) {
+    console.error('Error deactivating company:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const activateCompanyAccount = async (req: Request, res: Response) => {
+  try {
+    const companyId = req.user?.id;
+    if (!companyId) return res.status(403).json({ message: 'Access Denied' });
+    const company = await Company.findById(companyId).select('-password');
+    if (!company) return res.status(404).json({ message: 'Company not found' });
+    const nextStatus = company.isApproved ? 'approved' : (company.status === 'rejected' ? 'rejected' : 'pending');
+    const updated = await Company.findByIdAndUpdate(
+      companyId,
+      { $set: { isActive: true, status: nextStatus }, $unset: { disabledAt: 1 } },
+      { new: true, runValidators: true }
+    ).select('-password');
+    res.status(200).json({ message: 'Company activated', company: updated });
+  } catch (e) {
+    console.error('Error activating company:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const deleteCompanyAccount = async (req: Request, res: Response) => {
+  try {
+    const companyId = req.user?.id;
+    if (!companyId) return res.status(403).json({ message: 'Access Denied' });
+    const updated = await Company.findByIdAndUpdate(
+      companyId,
+      { $set: { status: 'deleted', isActive: false, deletedAt: new Date() } },
+      { new: true, runValidators: true }
+    ).select('-password');
+    if (!updated) return res.status(404).json({ message: 'Company not found' });
+    res.status(200).json({ message: 'Company account deleted', company: updated });
+  } catch (e) {
+    console.error('Error deleting company:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
  * @swagger
  * /api/company/jobs:
  *   get:
@@ -455,8 +591,8 @@ export const getApplicantsForJob = async (req: Request, res: Response) => {
 
     const applicants = await Application.find({ jobId }).populate(
       "employeeId",
-      "name email phoneNumber"
-    ); // Populate employee details
+      "name email phoneNumber location about profileImage documents"
+    ); // Populate richer employee details for modal
     res
       .status(200)
       .json({ message: "Applicants retrieved successfully", applicants });
@@ -533,7 +669,12 @@ export const browseEmployees = async (req: Request, res: Response) => {
     if (!companyId) return res.status(403).json({ message: "Access Denied" });
     // Lazy import to avoid circular
     const { default: Employee } = await import("../models/Employee");
-    const employees = await Employee.find().select(
+    const { category } = req.query as { category?: string };
+    const query: any = {};
+    if (category && typeof category === 'string') {
+      query.jobPreferences = { $in: [category] };
+    }
+    const employees = await Employee.find(query).select(
       "-password -role"
     );
     res.status(200).json({ message: "Employees retrieved", employees });
@@ -717,6 +858,23 @@ export const deleteLogo = async (req: Request, res: Response) => {
         .json({ message: "Access Denied: Company ID not found in token" });
     }
 
+    const current = await Company.findById(companyId).select("logo");
+    if (!current) return res.status(404).json({ message: "Company not found" });
+    const publicId = (current as any)?.logo?.public_id as string | undefined;
+
+    if (publicId) {
+      try {
+        cloudinarySdk.config({
+          cloud_name: cloudinary.cloudName,
+          api_key: cloudinary.apiKey,
+          api_secret: cloudinary.apiSecret,
+        });
+        await cloudinarySdk.uploader.destroy(publicId);
+      } catch (e) {
+        // Non-fatal: proceed with DB update regardless
+      }
+    }
+
     const company = await Company.findByIdAndUpdate(
       companyId,
       { $unset: { logo: 1 } },
@@ -760,6 +918,21 @@ export const deleteDocument = async (req: Request, res: Response) => {
 
     if (!company.documents || documentIndex >= company.documents.length) {
       return res.status(400).json({ message: "Document index out of range" });
+    }
+
+    const doc: any = (company.documents as any[])[documentIndex];
+    const publicId: string | undefined = doc && typeof doc === 'object' ? doc.public_id : undefined;
+    if (publicId) {
+      try {
+        cloudinarySdk.config({
+          cloud_name: cloudinary.cloudName,
+          api_key: cloudinary.apiKey,
+          api_secret: cloudinary.apiSecret,
+        });
+        await cloudinarySdk.uploader.destroy(publicId);
+      } catch (e) {
+        // ignore errors from cloudinary delete
+      }
     }
 
     company.documents.splice(documentIndex, 1);

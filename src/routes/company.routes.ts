@@ -18,6 +18,10 @@ import {
   getCompanyNotifications,
   markCompanyNotificationRead,
   deleteCompanyNotification,
+  updateJob,
+  deactivateCompanyAccount,
+  activateCompanyAccount,
+  deleteCompanyAccount,
 } from '../controllers/company.controller';
 import { authenticateToken, authorizeRoles, authorizeCompany } from '../middlewares/authMiddleware';
 import uploadSingle, { uploadMultiple } from "rod-fileupload"
@@ -175,6 +179,8 @@ router.patch('/complete-profile', authorizeCompany({ requireApproval: false }), 
  */
 // Posting jobs still requires approval
 router.post('/job', authorizeCompany({ requireApproval: true }), uploadSingle('image', cloudinary), postJob);
+// Update existing job
+router.patch('/job/:id', authorizeCompany({ requireApproval: true }), uploadSingle('image', cloudinary), updateJob);
 
 /**
  * @swagger
@@ -253,5 +259,10 @@ router.delete('/delete/document/:index', authorizeCompany({ requireApproval: fal
 router.get('/notifications', authorizeCompany({ requireApproval: false }), getCompanyNotifications);
 router.patch('/notifications/:notificationId/read', authorizeCompany({ requireApproval: false }), markCompanyNotificationRead);
 router.delete('/notifications/:notificationId', authorizeCompany({ requireApproval: false }), deleteCompanyNotification);
+
+// Company account lifecycle
+router.patch('/deactivate', authorizeCompany({ requireApproval: false }), deactivateCompanyAccount);
+router.patch('/activate', authorizeCompany({ requireApproval: false }), activateCompanyAccount);
+router.delete('/delete', authorizeCompany({ requireApproval: false }), deleteCompanyAccount);
 
 export default router;

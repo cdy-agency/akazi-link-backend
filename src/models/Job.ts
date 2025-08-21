@@ -17,7 +17,7 @@ const JobSchema: Schema = new Schema(
   description: { type: String},
   image:{type: FileInfoSchema},
   skills: { type: [String], default: [] },
-  location: {type: String},
+  location: { type: String, required: true },
   experience: { type: String },
   employmentType: {
     type: String,
@@ -26,10 +26,10 @@ const JobSchema: Schema = new Schema(
   salaryMin: { type: String },
   salaryMax: { type: String },
   category: { type: String},
-  responsibilities: {type:[String],default:[]},
+  responsibilities: { type: [String], default: [] },
   benefits: { type: [String], default: [] },
   companyId: { type: Types.ObjectId, ref: 'Company', required: true },
-  applicationDeadline: {type:String}
+  applicationDeadline: { type: String }
 },
 { timestamps: true }
 );

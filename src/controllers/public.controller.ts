@@ -50,7 +50,7 @@ export const listPublicJobs = async (req: Request, res: Response) => {
 
     const jobs = await Job.find(query)
       .sort({ createdAt: -1 })
-      .populate('companyId', 'companyName logo location');
+      .populate('companyId', 'companyName logo location about');
 
     res.status(200).json({ message: 'Jobs retrieved successfully', jobs });
   } catch (error) {
@@ -76,7 +76,7 @@ export const getPublicJobById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const job = await Job.findById(id)
-      .populate('companyId', 'companyName logo location');
+      .populate('companyId', 'companyName logo location about');
 
     if (!job) {
       return res.status(404).json({ message: 'Job not found' });
@@ -89,3 +89,22 @@ export const getPublicJobById = async (req: Request, res: Response) => {
   }
 };
 
+
+export const getPublicUserById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Find user by ID, excluding sensitive information
+    const user = await User.findById(id)
+      .select('-password -__v -resetPasswordToken -resetPasswordExpires');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json({ message: 'User retrieved successfully', user });
+  } catch (error) {
+    console.error('Error getting user:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

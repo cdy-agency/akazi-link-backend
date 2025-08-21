@@ -28,6 +28,7 @@ const ApplicationSchema: Schema = new Schema(
   resume:{type: String},
   skills: { type: [String], default: [] },
   experience: { type: String },
+  coverLetter: { type: String },
   appliedVia: {
     type: String,
     enum: ['normal', 'whatsapp', 'referral'],
