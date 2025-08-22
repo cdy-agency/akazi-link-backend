@@ -34,10 +34,15 @@ mongoose.connect(MONGO_URI)
 
 // Middleware
 app.use(cors({
-  origin: ["https://job-platform-rouge.vercel.app","http://localhost:3000"],
-  credentials: true
+  origin: [
+    "https://job-platform-rouge.vercel.app",
+    "https://job-platform-ab1gwwz75-mucyoblaise86-gmailcoms-projects.vercel.app",
+    "http://localhost:3000"
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json());
 
 // Swagger setup
 const swaggerOptions = {
