@@ -34,15 +34,28 @@ mongoose.connect(MONGO_URI)
 
 // Middleware
 app.use(cors({
-  origin: [
-    "https://job-platform-rouge.vercel.app",
-    "https://job-platform-ab1gwwz75-mucyoblaise86-gmailcoms-projects.vercel.app",
-    "http://localhost:3000"
-  ],
+  origin: process.env.FRONTEND_URL,
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
+
+// Body parsing middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Handle preflight requests for PATCH method
+app.options('*', cors());
+
+// Debug middleware for development
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    console.log(`${req.method} ${req.path} - Origin: ${req.headers.origin} - Authorization: ${req.headers.authorization ? 'Present' : 'Missing'}`);
+    next();
+  });
+}
 
 // Swagger setup
 const swaggerOptions = {
