@@ -1,7 +1,7 @@
 import mongoose, { Schema, Types } from 'mongoose';
 import { IFileInfo, IJob } from '../types/models';
 
-const FileInfoSchema = new Schema<IFileInfo>({
+const FileInfoSchema = new Schema<IFileInfo>({ 
   url: { type: String, required: true },
   public_id: { type: String, required: true },
   format: { type: String, required: true },

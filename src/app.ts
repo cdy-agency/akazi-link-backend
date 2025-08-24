@@ -34,23 +34,22 @@ mongoose.connect(MONGO_URI)
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL,
+  origin:'http://localhost:3000',
 }));
 
+console.log(process.env.FRONTEND_URL)
 // Body parsing middleware
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true })); 
 
-// Handle preflight requests for PATCH method
-app.options('*', cors());
 
 // Debug middleware for development
-if (process.env.NODE_ENV !== 'production') {
-  app.use((req, res, next) => {
-    console.log(`${req.method} ${req.path} - Origin: ${req.headers.origin} - Authorization: ${req.headers.authorization ? 'Present' : 'Missing'}`);
-    next();
-  });
-}
+// if (process.env.NODE_ENV !== 'production') {
+//   app.use((req, res, next) => {
+//     console.log(`${req.method} ${req.path} - Origin: ${req.headers.origin} - Authorization: ${req.headers.authorization ? 'Present' : 'Missing'}`);
+//     // next();
+//   });
+// }
 
 // Swagger setup
 const swaggerOptions = {
