@@ -517,6 +517,45 @@ export const deleteCompanyAccount = async (req: Request, res: Response) => {
 };
 
 /**
+ * Delete a job posted by the company
+ */
+export const deleteJob = async (req: Request, res: Response) => {
+  try {
+    const companyId = req.user?.id;
+    const { id } = req.params as { id: string };
+    
+    if (!companyId) {
+      return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+    }
+    
+    if (!Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid Job ID' });
+    }
+
+    const job = await Job.findById(id);
+    if (!job) {
+      return res.status(404).json({ message: 'Job not found' });
+    }
+
+    // Ensure the job belongs to the requesting company
+    if (job.companyId.toString() !== companyId) {
+      return res.status(403).json({ message: 'Access Denied: You do not own this job' });
+    }
+
+    // Delete the job
+    await Job.findByIdAndDelete(id);
+    
+    // Also delete all applications for this job
+    await Application.deleteMany({ jobId: id });
+
+    res.status(200).json({ message: 'Job deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting job:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
  * @swagger
  * /api/company/jobs:
  *   get:

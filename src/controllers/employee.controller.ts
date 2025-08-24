@@ -652,3 +652,35 @@ export const deleteEmployeeAccount = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+/**
+ * Check if employee has already applied to a specific job
+ */
+export const checkJobApplication = async (req: Request, res: Response) => {
+  try {
+    const employeeId = req.user?.id;
+    const { jobId } = req.params as { jobId: string };
+    
+    if (!employeeId) {
+      return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
+    }
+    
+    if (!Types.ObjectId.isValid(jobId)) {
+      return res.status(400).json({ message: 'Invalid Job ID' });
+    }
+
+    const application = await Application.findOne({ 
+      employeeId, 
+      jobId 
+    });
+
+    res.status(200).json({ 
+      message: 'Application status checked successfully',
+      hasApplied: !!application,
+      application: application || null
+    });
+  } catch (error) {
+    console.error('Error checking job application:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

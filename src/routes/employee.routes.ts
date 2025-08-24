@@ -18,6 +18,7 @@ import {
   updateDocuments,
   deleteDocument,
   resetPassword,
+  checkJobApplication,
   deactivateEmployeeAccount,
   activateEmployeeAccount,
   deleteEmployeeAccount,
@@ -54,6 +55,8 @@ router.get('/jobs', getJobsByCategory);
 router.get('/suggestions', getJobSuggestions);
 
 router.post('/apply/:jobId', ensureEmployeeActive(), applyForJob);
+
+router.get('/check-application/:jobId', checkJobApplication);
 
 
 router.get('/applications', getApplications);
