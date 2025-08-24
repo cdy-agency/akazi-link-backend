@@ -34,7 +34,7 @@ mongoose.connect(MONGO_URI)
 
 // Middleware
 app.use(cors({
-  origin:process.env.FRONTEND_URL,
+  origin:["https://job-platform-lake.vercel.app"],
 }));
 
 console.log(process.env.FRONTEND_URL)
