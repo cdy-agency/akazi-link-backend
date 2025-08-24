@@ -34,7 +34,7 @@ mongoose.connect(MONGO_URI)
 
 // Middleware
 app.use(cors({
-  origin:'http://localhost:3000',
+  origin:process.env.FRONTEND_URL,
 }));
 
 console.log(process.env.FRONTEND_URL)
