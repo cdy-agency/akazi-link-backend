@@ -16,6 +16,7 @@ export interface IUser extends Document {
   image?: string;
   password?: string;
   role: "employee" | "company" | "superadmin";
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -31,7 +32,6 @@ export interface ICompany extends IUser {
   about?: string;
   documents?: IFileInfo[]; // Updated to store file info objects
   status: "pending" | "approved" | "rejected" | "disabled" | "deleted";
-  isActive: boolean;
   rejectionReason?: string;
   disabledAt?: Date;
   deletedAt?: Date;

@@ -17,7 +17,7 @@ const JobSchema: Schema = new Schema(
   description: { type: String},
   image:{type: FileInfoSchema},
   skills: { type: [String], default: [] },
-  location: { type: String},
+  location: { type: String, required: true},
   experience: { type: String },
   employmentType: {
     type: String,

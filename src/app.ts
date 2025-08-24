@@ -33,14 +33,14 @@ mongoose.connect(MONGO_URI)
 });
 
 // Middleware
-// app.use(cors({
-//   origin: "https://job-platform-lake.vercel.app",
-//   credentials: true,
-//   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-//   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-//   preflightContinue: false,
-//   optionsSuccessStatus: 204
-// }));
+app.use(cors({
+  origin: "http://localhost:3000",
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+}));
 
 // Body parsing middleware
 app.use(express.json());

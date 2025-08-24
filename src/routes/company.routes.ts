@@ -52,7 +52,7 @@ router.use(authenticateToken); // All company routes require authentication
  *         description: Forbidden - not a company or not approved
  */
 // Allow unapproved but active companies to fetch profile
-router.get('/profile', authorizeCompany({ requireApproval: false }), getProfile);
+router.get('/profile', authorizeCompany({ requireApproval: false, allowDisabled: true }), getProfile);
 
 /**
  * @swagger
@@ -105,10 +105,10 @@ router.get('/profile', authorizeCompany({ requireApproval: false }), getProfile)
  *         description: Forbidden - not a company or not approved
  */
 // Allow unapproved but active companies to update basics/password (not jobs)
-router.patch('/profile', authorizeCompany({ requireApproval: false }), updateProfile);
+router.patch('/profile', authorizeCompany({ requireApproval: false, allowDisabled: true }), updateProfile);
 // Company completes missing information (about, documents)
 // Allow unapproved but active companies to complete profile and upload files
-router.patch('/complete-profile', authorizeCompany({ requireApproval: false }), completeCompanyProfile);
+router.patch('/complete-profile', authorizeCompany({ requireApproval: false, allowDisabled: true }), completeCompanyProfile);
 
 /**
  * @swagger
@@ -248,12 +248,12 @@ router.get('/employees', authorizeCompany({ requireApproval: true }), browseEmpl
 router.post('/work-requests', authorizeCompany({ requireApproval: true }), sendWorkRequest);
 
 // File upload endpoints
-router.post('/upload/logo', authorizeCompany({ requireApproval: false }), uploadSingle('logo', cloudinary), uploadLogo);
-router.post('/upload/documents', authorizeCompany({ requireApproval: false }), uploadMultiple('documents', cloudinary), uploadDocuments);
-router.patch('/update/logo', authorizeCompany({ requireApproval: false }), uploadSingle('logo', cloudinary), updateLogo);
-router.patch('/update/documents', authorizeCompany({ requireApproval: false }), uploadMultiple('documents', cloudinary), updateDocuments);
-router.delete('/delete/logo', authorizeCompany({ requireApproval: false }), deleteLogo);
-router.delete('/delete/document/:index', authorizeCompany({ requireApproval: false }), deleteDocument);
+router.post('/upload/logo', authorizeCompany({ requireApproval: false, allowDisabled: true }), uploadSingle('logo', cloudinary), uploadLogo);
+router.post('/upload/documents', authorizeCompany({ requireApproval: false, allowDisabled: true }), uploadMultiple('documents', cloudinary), uploadDocuments);
+router.patch('/update/logo', authorizeCompany({ requireApproval: false, allowDisabled: true }), uploadSingle('logo', cloudinary), updateLogo);
+router.patch('/update/documents', authorizeCompany({ requireApproval: false, allowDisabled: true }), uploadMultiple('documents', cloudinary), updateDocuments);
+router.delete('/delete/logo', authorizeCompany({ requireApproval: false, allowDisabled: true }), deleteLogo);
+router.delete('/delete/document/:index', authorizeCompany({ requireApproval: false, allowDisabled: true }), deleteDocument);
 
 // Company notifications
 router.get('/notifications', authorizeCompany({ requireApproval: false }), getCompanyNotifications);
@@ -261,8 +261,8 @@ router.patch('/notifications/:notificationId/read', authorizeCompany({ requireAp
 router.delete('/notifications/:notificationId', authorizeCompany({ requireApproval: false }), deleteCompanyNotification);
 
 // Company account lifecycle
-router.patch('/deactivate', authorizeCompany({ requireApproval: false }), deactivateCompanyAccount);
-router.patch('/activate', authorizeCompany({ requireApproval: false }), activateCompanyAccount);
-router.delete('/delete', authorizeCompany({ requireApproval: false }), deleteCompanyAccount);
+router.patch('/deactivate', authorizeCompany({ requireApproval: false, allowDisabled: true }), deactivateCompanyAccount);
+router.patch('/activate', authorizeCompany({ requireApproval: false, allowDisabled: true }), activateCompanyAccount);
+router.delete('/delete', authorizeCompany({ requireApproval: false, allowDisabled: true }), deleteCompanyAccount);
 
 export default router;

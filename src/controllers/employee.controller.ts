@@ -594,13 +594,17 @@ export const deactivateEmployeeAccount = async (req: Request, res: Response) => 
   try {
     const employeeId = req.user?.id;
     if (!employeeId) return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
-    const updated = await User.findByIdAndUpdate(
+    
+    // Update both User and Employee models
+    const updatedUser = await User.findByIdAndUpdate(
       employeeId,
       { $set: { isActive: false } },
       { new: true }
     ).select('-password');
-    if (!updated) return res.status(404).json({ message: 'Employee not found' });
-    res.status(200).json({ message: 'Account deactivated', user: updated });
+    
+    if (!updatedUser) return res.status(404).json({ message: 'Employee not found' });
+    
+    res.status(200).json({ message: 'Account deactivated', user: updatedUser });
   } catch (error) {
     console.error('Error deactivating employee:', error);
     res.status(500).json({ message: 'Server error' });
@@ -611,13 +615,17 @@ export const activateEmployeeAccount = async (req: Request, res: Response) => {
   try {
     const employeeId = req.user?.id;
     if (!employeeId) return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
-    const updated = await User.findByIdAndUpdate(
+    
+    // Update both User and Employee models
+    const updatedUser = await User.findByIdAndUpdate(
       employeeId,
       { $set: { isActive: true } },
       { new: true }
     ).select('-password');
-    if (!updated) return res.status(404).json({ message: 'Employee not found' });
-    res.status(200).json({ message: 'Account activated', user: updated });
+    
+    if (!updatedUser) return res.status(404).json({ message: 'Employee not found' });
+    
+    res.status(200).json({ message: 'Account activated', user: updatedUser });
   } catch (error) {
     console.error('Error activating employee:', error);
     res.status(500).json({ message: 'Server error' });
@@ -628,14 +636,17 @@ export const deleteEmployeeAccount = async (req: Request, res: Response) => {
   try {
     const employeeId = req.user?.id;
     if (!employeeId) return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
+    
     // Soft-delete: set isActive false. For full removal, we'd remove discriminator docs as well.
-    const updated = await User.findByIdAndUpdate(
+    const updatedUser = await User.findByIdAndUpdate(
       employeeId,
       { $set: { isActive: false } },
       { new: true }
     ).select('-password');
-    if (!updated) return res.status(404).json({ message: 'Employee not found' });
-    res.status(200).json({ message: 'Account deleted', user: updated });
+    
+    if (!updatedUser) return res.status(404).json({ message: 'Employee not found' });
+    
+    res.status(200).json({ message: 'Account deleted', user: updatedUser });
   } catch (error) {
     console.error('Error deleting employee:', error);
     res.status(500).json({ message: 'Server error' });

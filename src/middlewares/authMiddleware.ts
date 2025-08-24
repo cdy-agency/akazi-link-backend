@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/authUtils';
 import Company from '../models/Company';
 import Employee from '../models/Employee';
+import User from '../models/User'; // Added import for User model
 
 /**
 * Middleware to authenticate JWT token.
@@ -62,8 +63,8 @@ return async (req: Request, res: Response, next: NextFunction) => {
  * - When requireApproval is false, allows pending/rejected companies to access,
  *   but still blocks disabled/deleted and inactive accounts.
  */
-export const authorizeCompany = (options?: { requireApproval?: boolean }) => {
-  const { requireApproval = true } = options || {};
+export const authorizeCompany = (options?: { requireApproval?: boolean; allowDisabled?: boolean }) => {
+  const { requireApproval = true, allowDisabled = false } = options || {};
   return async (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(403).json({ message: 'Access Denied: User not authenticated' });
@@ -76,8 +77,12 @@ export const authorizeCompany = (options?: { requireApproval?: boolean }) => {
     if (!company) {
       return res.status(403).json({ message: 'Access Denied: Company not found' });
     }
-    // Always block disabled or deleted
-    if (company.status === 'disabled' || company.status === 'deleted' || !company.isActive) {
+    // Always block deleted accounts
+    if (company.status === 'deleted') {
+      return res.status(403).json({ message: 'Access Denied: Company account is deleted' });
+    }
+    // Block disabled accounts unless explicitly allowed (for profile access)
+    if (!allowDisabled && (company.status === 'disabled' || !company.isActive)) {
       return res.status(403).json({ message: 'Access Denied: Company account is disabled or deleted' });
     }
     if (requireApproval) {
@@ -97,11 +102,13 @@ export const ensureEmployeeActive = () => {
         return res.status(403).json({ message: 'Access Denied: User not authenticated' });
       }
       if (req.user.role !== 'employee') return next();
-      const employee = await Employee.findById(req.user.id);
-      if (!employee) {
+      
+      // Check User model for isActive status
+      const user = await User.findById(req.user.id);
+      if (!user) {
         return res.status(403).json({ message: 'Access Denied: Employee not found' });
       }
-      if ((employee as any).isActive === false) {
+      if (user.isActive === false) {
         return res.status(403).json({ message: 'Access Denied: Account is deactivated' });
       }
       next();
