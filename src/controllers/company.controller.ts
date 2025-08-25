@@ -733,9 +733,24 @@ export const sendWorkRequest = async (req: Request, res: Response) => {
       employeeId: string;
       message?: string;
     };
-    if (!companyId) return res.status(403).json({ message: "Access Denied" });
-    if (!Types.ObjectId.isValid(employeeId))
+
+    if (!companyId) {
+      return res.status(403).json({ message: "Access Denied" });
+    }
+
+    if (!Types.ObjectId.isValid(employeeId)) {
       return res.status(400).json({ message: "Invalid employeeId" });
+    }
+
+    // Check if request already exists
+    const existingRequest = await WorkRequest.findOne({ companyId, employeeId });
+    if (existingRequest) {
+      return res.status(400).json({
+        message: "You have already sent a work request to this employee",
+      });
+    }
+
+    // If not, create new
     const work = await WorkRequest.create({
       companyId,
       employeeId,
@@ -748,6 +763,7 @@ export const sendWorkRequest = async (req: Request, res: Response) => {
         } as any,
       ],
     });
+
     res.status(201).json({ message: "Work request sent", work });
   } catch (error) {
     console.error("Error sending work request:", error);
@@ -1171,3 +1187,4 @@ export const deleteCompanyNotification = async (req: Request, res: Response) => 
     res.status(500).json({ message: 'Server error' });
   }
 };
+
