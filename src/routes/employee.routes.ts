@@ -54,7 +54,7 @@ router.get('/jobs', getJobsByCategory);
 
 router.get('/suggestions', getJobSuggestions);
 
-router.post('/apply/:jobId', ensureEmployeeActive(), applyForJob);
+router.post('/apply/:jobId', ensureEmployeeActive(), uploadSingle('resume', cloudinary), applyForJob);
 
 router.get('/check-application/:jobId', checkJobApplication);
 

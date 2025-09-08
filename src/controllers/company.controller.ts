@@ -462,6 +462,37 @@ export const updateJob = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * Get a single job owned by the authenticated company
+ */
+export const getCompanyJobById = async (req: Request, res: Response) => {
+  try {
+    const companyId = req.user?.id;
+    const { id } = req.params as { id: string };
+    if (!companyId) {
+      return res
+        .status(403)
+        .json({ message: "Access Denied: Company ID not found in token" });
+    }
+    if (!Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid Job ID" });
+    }
+
+    const job = await Job.findById(id);
+    if (!job) return res.status(404).json({ message: "Job not found" });
+    if (job.companyId.toString() !== companyId) {
+      return res
+        .status(403)
+        .json({ message: "Access Denied: You do not own this job" });
+    }
+
+    res.status(200).json({ message: 'Job retrieved successfully', job });
+  } catch (error) {
+    console.error('Error getting company job by id:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 /** Activate/deactivate/delete company account */
 export const deactivateCompanyAccount = async (req: Request, res: Response) => {
   try {

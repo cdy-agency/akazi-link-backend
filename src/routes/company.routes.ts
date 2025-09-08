@@ -23,6 +23,7 @@ import {
   deactivateCompanyAccount,
   activateCompanyAccount,
   deleteCompanyAccount,
+  getCompanyJobById,
 } from '../controllers/company.controller';
 import { authenticateToken, authorizeRoles, authorizeCompany } from '../middlewares/authMiddleware';
 import uploadSingle, { uploadMultiple } from "rod-fileupload"
@@ -208,6 +209,8 @@ router.delete('/job/:id', authorizeCompany({ requireApproval: true }), deleteJob
  *         description: Forbidden - not a company or not approved
  */
 router.get('/jobs', authorizeCompany({ requireApproval: true }), getCompanyJobs);
+// Get a single job owned by the company
+router.get('/job/:id', authorizeCompany({ requireApproval: true }), getCompanyJobById);
 
 /**
  * @swagger

@@ -144,12 +144,16 @@ try {
     return res.status(400).json({ message: 'You have already applied for this job' });
   }
 
+  // Parse uploaded resume file (uploaded via middleware as complete file info object)
+  const resumeFile = parseSingleFile((req.body as any).resume);
+
   const application = await Application.create({
     jobId,
     employeeId,
     skills: [],
     experience,
     coverLetter: typeof coverLetter === 'string' ? coverLetter : (typeof message === 'string' ? message : undefined),
+    resume: resumeFile?.url,
     appliedVia: appliedVia || 'normal',
     status: 'pending',
   });
