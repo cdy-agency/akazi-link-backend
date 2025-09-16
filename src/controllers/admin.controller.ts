@@ -125,7 +125,7 @@ try {
     status: "approved",
     message: "Congratulations! Your company has been approved.",
     dashboardLink: `${process.env.FRONTEND_URL_DASHBOARD}/company`,
-    logo: process.env.APP_LOGO, // static logo
+    logo: company.logo?.url || process.env.APP_LOGO,
   },
 });
 

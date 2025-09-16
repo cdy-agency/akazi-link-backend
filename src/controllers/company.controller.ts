@@ -11,6 +11,7 @@ import cloudinary from "../config/cloudinary";
 import { v2 as cloudinarySdk } from "cloudinary";
 import { parseSingleFile as parseSingleFileUpload } from '../services/fileUploadService';
 import { sendEmail } from "../utils/sendEmail";
+import AdminNotification from "../models/AdminNotification";
 import Employee from "../models/Employee";
 import Application from "../models/Application";
 
@@ -166,8 +167,35 @@ export const completeCompanyProfile = async (req: Request, res: Response) => {
 
     if (!company) return res.status(404).json({ message: "Company not found" });
 
-    await recomputeProfileCompletionStatus(companyId);
+    const prevStatus = company.profileCompletionStatus;
+    const nextStatus = await recomputeProfileCompletionStatus(companyId);
     const refreshed = await Company.findById(companyId).select("-password");
+
+    // If transitioned to pending_review, notify admin via email and system
+    if (prevStatus !== "pending_review" && nextStatus === "pending_review") {
+      try {
+        await sendEmail({
+          type: "companyProfileCompletedNotify",
+          to: process.env.SMTP_USER || "",
+          data: {
+            companyName: refreshed?.companyName || company.companyName,
+            dashboardLink: `${process.env.FRONTEND_URL_DASHBOARD}/admin`,
+            logo: refreshed?.logo?.url || company.logo?.url,
+          },
+        });
+      } catch (emailErr) {
+        console.error("Failed to send admin email for profile completion", emailErr);
+      }
+      try {
+        await AdminNotification.create({
+          message: `Company profile completed: ${refreshed?.companyName || company.companyName}`,
+          read: false,
+          createdAt: new Date(),
+        });
+      } catch (notifErr) {
+        console.error("Failed to create admin system notification for profile completion", notifErr);
+      }
+    }
 
     res
       .status(200)
