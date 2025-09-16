@@ -6,6 +6,7 @@ import Employee from '../models/Employee';
 import { comparePasswords, generateToken, hashPassword } from '../utils/authUtils';
 import { Types } from 'mongoose';
 import { sendEmail } from '../utils/sendEmail';
+import AdminNotification from '../models/AdminNotification';
 
 export const adminLogin = async (req: Request, res: Response) => {
 try {
@@ -128,6 +129,25 @@ try {
   },
 });
 
+  // Company system notification
+  try {
+    await Company.findByIdAndUpdate(id, {
+      $push: { notifications: { message: 'Your company has been approved', read: false, createdAt: new Date() } }
+    });
+  } catch (error) {
+    console.error('Failed to create company system notification (approved)', error);
+  }
+  // Admin system notification
+  try {
+    await AdminNotification.create({
+      message: `Company approved: ${company.companyName}`,
+      read: false,
+      createdAt: new Date(),
+    });
+  } catch (error) {
+    console.error('Failed to create admin notification for approveCompany', error);
+  }
+
   res.status(200).json({ message: 'Company approved successfully', company });
 } catch (error) {
   console.error('Error approving company:', error);
@@ -175,6 +195,25 @@ try {
       logo: process.env.APP_LOGO,
     }
   })
+
+  // Company system notification
+  try {
+    await Company.findByIdAndUpdate(id, {
+      $push: { notifications: { message: 'Your company application was rejected', read: false, createdAt: new Date() } }
+    });
+  } catch (error) {
+    console.error('Failed to create company system notification (rejected)', error);
+  }
+  // Admin system notification
+  try {
+    await AdminNotification.create({
+      message: `Company rejected: ${company.companyName}`,
+      read: false,
+      createdAt: new Date(),
+    });
+  } catch (error) {
+    console.error('Failed to create admin notification for rejectCompany', error);
+  }
 
   res.status(200).json({ message: 'Company rejected successfully', company });
 } catch (error) {
@@ -379,6 +418,30 @@ export const approveCompanyProfile = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Company not found' });
     }
 
+    // Notify company via email and system notification
+    try {
+      await sendEmail({
+        to: company.email,
+        type: 'companyApproval',
+        data: {
+          companyName: company.companyName,
+          status: 'approved',
+          message: 'Your profile has been approved. Welcome!',
+          dashboardLink: `${process.env.FRONTEND_URL_DASHBOARD}/company`,
+          logo: process.env.APP_LOGO,
+        },
+      });
+    } catch (e) {
+      console.error('Failed sending company approval email (approveCompanyProfile)', e);
+    }
+    try {
+      await Company.findByIdAndUpdate(id, {
+        $push: { notifications: { message: 'Your profile has been approved', read: false, createdAt: new Date() } }
+      });
+    } catch (e) {
+      console.error('Failed creating company system notification (approveCompanyProfile)', e);
+    }
+
     res.status(200).json({ message: 'Company profile approved successfully', company });
   } catch (error) {
     console.error('Error approving company profile:', error);
@@ -436,6 +499,29 @@ export const rejectCompanyProfile = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Company not found' });
     }
 
+    // Notify company via email and system notification
+    try {
+      await sendEmail({
+        to: company.email,
+        type: 'companyApproval',
+        data: {
+          companyName: company.companyName,
+          status: 'rejected',
+          message: rejectionReason,
+          logo: process.env.APP_LOGO,
+        },
+      });
+    } catch (e) {
+      console.error('Failed sending company rejection email (rejectCompanyProfile)', e);
+    }
+    try {
+      await Company.findByIdAndUpdate(id, {
+        $push: { notifications: { message: 'Your profile was rejected', read: false, createdAt: new Date() } }
+      });
+    } catch (e) {
+      console.error('Failed creating company system notification (rejectCompanyProfile)', e);
+    }
+
     res.status(200).json({ message: 'Company profile rejected successfully', company });
   } catch (error) {
     console.error('Error rejecting company profile:', error);
@@ -448,29 +534,8 @@ export const rejectCompanyProfile = async (req: Request, res: Response) => {
 
 export const getAdminNotifications = async (req: Request, res: Response) => {
   try {
-    // For admin, we can aggregate notifications from various sources
-    // For now, let's create some system notifications
-    const notifications = [
-      {
-        _id: '1',
-        message: 'New company registration pending review',
-        read: false,
-        createdAt: new Date(),
-        type: 'system'
-      },
-      {
-        _id: '2', 
-        message: 'New employee registered',
-        read: false,
-        createdAt: new Date(),
-        type: 'system'
-      }
-    ];
-
-    res.status(200).json({ 
-      message: 'Admin notifications retrieved successfully', 
-      notifications 
-    });
+    const notifications = await AdminNotification.find().sort({ createdAt: -1 });
+    res.status(200).json({ message: 'Admin notifications retrieved successfully', notifications });
   } catch (error) {
     console.error('Error getting admin notifications:', error);
     res.status(500).json({ message: 'Server error' });
@@ -487,9 +552,7 @@ export const markAdminNotificationRead = async (req: Request, res: Response) => 
     if (!notificationId) {
       return res.status(400).json({ message: 'Notification ID is required' });
     }
-
-    // In a real implementation, you would update the notification in the database
-    // For now, we'll just return success
+    await AdminNotification.findByIdAndUpdate(notificationId, { $set: { read: true } });
     res.status(200).json({ message: 'Notification marked as read' });
   } catch (error) {
     console.error('Error marking admin notification as read:', error);
@@ -507,9 +570,7 @@ export const deleteAdminNotification = async (req: Request, res: Response) => {
     if (!notificationId) {
       return res.status(400).json({ message: 'Notification ID is required' });
     }
-
-    // In a real implementation, you would delete the notification from the database
-    // For now, we'll just return success
+    await AdminNotification.findByIdAndDelete(notificationId);
     res.status(200).json({ message: 'Notification deleted successfully' });
   } catch (error) {
     console.error('Error deleting admin notification:', error);

@@ -2,7 +2,6 @@
 import { Request, Response } from "express";
 import Company from "../models/Company";
 import Job from "../models/Job";
-import Application from "../models/Application";
 import { Types } from "mongoose";
 import WorkRequest from "../models/WorkRequest";
 import { comparePasswords, hashPassword } from "../utils/authUtils";
@@ -13,6 +12,7 @@ import { v2 as cloudinarySdk } from "cloudinary";
 import { parseSingleFile as parseSingleFileUpload } from '../services/fileUploadService';
 import { sendEmail } from "../utils/sendEmail";
 import Employee from "../models/Employee";
+import Application from "../models/Application";
 
 
 export const getProfile = async (req: Request, res: Response) => {
@@ -684,7 +684,7 @@ export const sendWorkRequest = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Employee not found" });
     }
 
-    // Create work request
+    // Create work request with initial employee notification
     const work = await WorkRequest.create({
       companyId,
       employeeId,
@@ -718,6 +718,8 @@ export const sendWorkRequest = async (req: Request, res: Response) => {
     } catch (emailError) {
       console.error("Failed to send job offer email", emailError);
     }
+
+    // System notification for employee stored on WorkRequest already done above
 
     res.status(201).json({ message: "Work request sent", work });
   } catch (error) {
@@ -1013,16 +1015,24 @@ export const getCompanyNotifications = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
     }
 
-    // Get notifications from work requests and applications
-    const workRequests = await WorkRequest.find({ companyId }).select('notifications');
-    const applications = await Application.find({ 
-      jobId: { $in: await Job.find({ companyId }).select('_id') }
-    }).select('notifications');
+    // Get notifications from company document, work requests, and applications
+    const [companyDoc, workRequests, jobDocs] = await Promise.all([
+      Company.findById(companyId).select('notifications'),
+      WorkRequest.find({ companyId }).select('notifications'),
+      Job.find({ companyId }).select('_id')
+    ]);
+    const jobIds = jobDocs.map(j => j._id);
+    const applications = await Application.find({ jobId: { $in: jobIds } }).select('notifications');
 
-    const workRequestNotifications = workRequests.flatMap(wr => wr.notifications);
-    const applicationNotifications = applications.flatMap(app => app.notifications);
+    const companyNotifications = (companyDoc?.notifications as any[]) || [];
+    const workRequestNotifications = workRequests.flatMap(wr => wr.notifications as any[]);
+    const applicationNotifications = applications.flatMap(app => app.notifications as any[]);
 
-    const allNotifications = [...workRequestNotifications, ...applicationNotifications];
+    const allNotifications = [
+      ...companyNotifications,
+      ...workRequestNotifications,
+      ...applicationNotifications,
+    ];
 
     res.status(200).json({ 
       message: 'Company notifications retrieved successfully', 
@@ -1049,6 +1059,11 @@ export const markCompanyNotificationRead = async (req: Request, res: Response) =
     if (!Types.ObjectId.isValid(notificationId)) {
       return res.status(400).json({ message: 'Invalid notification ID' });
     }
+    // Try update on Company.notifications first
+    const companyUpdated = await Company.updateOne(
+      { _id: companyId, 'notifications._id': notificationId },
+      { $set: { 'notifications.$.read': true } }
+    );
 
     // Find and update notification in work requests
     const workRequestUpdated = await WorkRequest.updateOne(
@@ -1064,7 +1079,7 @@ export const markCompanyNotificationRead = async (req: Request, res: Response) =
     );
 
     // Find and update notification in applications
-    const jobIds = await Job.find({ companyId }).select('_id');
+    const jobIds = (await Job.find({ companyId }).select('_id')).map(j => j._id);
     const applicationUpdated = await Application.updateOne(
       { 
         jobId: { $in: jobIds }, 
@@ -1077,7 +1092,11 @@ export const markCompanyNotificationRead = async (req: Request, res: Response) =
       }
     );
 
-    if (workRequestUpdated.modifiedCount === 0 && applicationUpdated.modifiedCount === 0) {
+    if (
+      companyUpdated.modifiedCount === 0 &&
+      workRequestUpdated.modifiedCount === 0 &&
+      applicationUpdated.modifiedCount === 0
+    ) {
       return res.status(404).json({ message: 'Notification not found' });
     }
 
@@ -1103,6 +1122,11 @@ export const deleteCompanyNotification = async (req: Request, res: Response) => 
     if (!Types.ObjectId.isValid(notificationId)) {
       return res.status(400).json({ message: 'Invalid notification ID' });
     }
+    // Try delete from Company.notifications first
+    const companyUpdated = await Company.updateOne(
+      { _id: companyId, 'notifications._id': notificationId },
+      { $pull: { notifications: { _id: notificationId } } }
+    );
 
     // Find and delete notification from work requests
     const workRequestUpdated = await WorkRequest.updateOne(
@@ -1118,7 +1142,7 @@ export const deleteCompanyNotification = async (req: Request, res: Response) => 
     );
 
     // Find and delete notification from applications
-    const jobIds = await Job.find({ companyId }).select('_id');
+    const jobIds = (await Job.find({ companyId }).select('_id')).map(j => j._id);
     const applicationUpdated = await Application.updateOne(
       { 
         jobId: { $in: jobIds }, 
@@ -1131,7 +1155,11 @@ export const deleteCompanyNotification = async (req: Request, res: Response) => 
       }
     );
 
-    if (workRequestUpdated.modifiedCount === 0 && applicationUpdated.modifiedCount === 0) {
+    if (
+      companyUpdated.modifiedCount === 0 &&
+      workRequestUpdated.modifiedCount === 0 &&
+      applicationUpdated.modifiedCount === 0
+    ) {
       return res.status(404).json({ message: 'Notification not found' });
     }
 

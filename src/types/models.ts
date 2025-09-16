@@ -37,6 +37,7 @@ export interface ICompany extends IUser {
   deletedAt?: Date;
   profileCompletionStatus: "incomplete" | "complete" | "pending_review";
   profileCompletedAt?: Date;
+  notifications?: INotification[];
 }
 
 export interface IEmployee extends IUser {

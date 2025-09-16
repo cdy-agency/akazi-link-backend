@@ -23,6 +23,15 @@ const FileInfoSchema = new Schema<IFileInfo>({
   time: { type: String, required: true }
 });
 
+const NotificationSchema: Schema = new Schema(
+  {
+    message: { type: String, required: true },
+    read: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now },
+  },
+  { _id: true }
+);
+
 const CompanySchema: Schema = new Schema(
 {
   companyName: { type: String, required: true },
@@ -34,6 +43,7 @@ const CompanySchema: Schema = new Schema(
   password: {type: String, required: true},
   about: { type: String },
   documents: { type: [FileInfoSchema], default: [] },
+  notifications: { type: [NotificationSchema], default: [] },
   status: { 
     type: String, 
     enum: ['pending', 'approved', 'rejected', 'disabled', 'deleted'], 
