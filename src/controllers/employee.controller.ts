@@ -10,6 +10,7 @@ import cloudinary from "../config/cloudinary";
 import { v2 as cloudinarySdk } from "cloudinary";
 import { comparePasswords, hashPassword } from '../utils/authUtils';
 import User from '../models/User';
+import { sendEmail } from '../utils/sendEmail';
 
 
 export const getProfile = async (req: Request, res: Response) => {
@@ -125,6 +126,7 @@ try {
   const { jobId } = req.params;
   const { coverLetter, experience, appliedVia, message } = req.body as any;
   const employeeId = req.user?.id;
+  const employee = await Employee.findById(employeeId).select("name email skills");
 
   if (!employeeId) {
     return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
@@ -138,6 +140,17 @@ try {
   if (!job) {
     return res.status(404).json({ message: 'Job not found' });
   }
+
+  sendEmail({
+    to:(job.companyId as any).email,
+    type: 'jobApplication',
+    data: {
+      applicantName: employee?.name || "",
+      applicantEmail: employee?.email || "",
+      jobTitle: job.title,
+      jobId: job.id
+    }
+  })
 
   const existingApplication = await Application.findOne({ jobId, employeeId });
   if (existingApplication) {

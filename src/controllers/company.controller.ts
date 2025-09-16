@@ -11,42 +11,10 @@ import { parseSingleFile, parseMultipleFiles, updateSingleFileField, pushMultipl
 import cloudinary from "../config/cloudinary";
 import { v2 as cloudinarySdk } from "cloudinary";
 import { parseSingleFile as parseSingleFileUpload } from '../services/fileUploadService';
+import { sendEmail } from "../utils/sendEmail";
+import Employee from "../models/Employee";
 
-/**
- * @swagger
- * tags:
- *   name: Company
- *   description: Company specific operations
- */
 
-/**
- * @swagger
- * /api/company/profile:
- *   get:
- *     summary: Get company profile
- *     tags: [Company]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Company profile retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Company profile retrieved successfully
- *                 company:
- *                   $ref: '#/components/schemas/Company'
- *       403:
- *         description: Access Denied
- *       404:
- *         description: Company not found
- *       500:
- *         description: Server error
- */
 export const getProfile = async (req: Request, res: Response) => {
   try {
     const companyId = req.user?.id;
@@ -95,56 +63,7 @@ export const getProfile = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * @swagger
- * /api/company/profile:
- *   patch:
- *     summary: Update company profile
- *     tags: [Company]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               companyName:
- *                 type: string
- *                 example: Tech Solutions Inc. (Updated)
- *               location:
- *                 type: string
- *                 example: San Francisco, USA
- *               phoneNumber:
- *                 type: string
- *                 example: "+1122334455"
- *               website:
- *                 type: string
- *                 example: https://www.techsolutions-updated.com
- *               logo:
- *                 type: string
- *                 example: https://example.com/new_logo.png
- *     responses:
- *       200:
- *         description: Company profile updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Company profile updated successfully
- *                 company:
- *                   $ref: '#/components/schemas/Company'
- *       403:
- *         description: Access Denied
- *       404:
- *         description: Company not found
- *       500:
- *         description: Server error
- */
+
 export const updateProfile = async (req: Request, res: Response) => {
   try {
     const companyId = req.user?.id;
@@ -586,34 +505,7 @@ export const deleteJob = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * @swagger
- * /api/company/jobs:
- *   get:
- *     summary: Get all jobs posted by the company
- *     tags: [Company]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Jobs retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Jobs retrieved successfully
- *                 jobs:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Job'
- *       403:
- *         description: Access Denied
- *       500:
- *         description: Server error
- */
+
 export const getCompanyJobs = async (req: Request, res: Response) => {
   try {
     const companyId = req.user?.id;
@@ -781,7 +673,18 @@ export const sendWorkRequest = async (req: Request, res: Response) => {
       });
     }
 
-    // If not, create new
+    // 🔹 Fetch company and employee
+    const company = await Company.findById(companyId).select("companyName email");
+    if (!company) {
+      return res.status(404).json({ message: "Company not found" });
+    }
+
+    const employee = await Employee.findById(employeeId).select("name email");
+    if (!employee) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+
+    // Create work request
     const work = await WorkRequest.create({
       companyId,
       employeeId,
@@ -795,13 +698,33 @@ export const sendWorkRequest = async (req: Request, res: Response) => {
       ],
     });
 
+    // 🔹 Send job offer email
+    try {
+      await sendEmail({
+        type: "jobOffer",
+        to: employee.email,
+        data: {
+          employeeName: employee.name,
+          companyName: company.companyName,
+          jobTitle: message || "Job Opportunity",
+          jobDescription: message,
+          logo: process.env.APP_LOGO, // static app logo
+          acceptOfferLink: `${process.env.APP_URL}/offers/${work._id}/accept`,
+          offerExpiryDate: new Date(
+            Date.now() + 7 * 24 * 60 * 60 * 1000
+          ).toDateString(), // expires in 7 days
+        },
+      });
+    } catch (emailError) {
+      console.error("Failed to send job offer email", emailError);
+    }
+
     res.status(201).json({ message: "Work request sent", work });
   } catch (error) {
     console.error("Error sending work request:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
-
 /**
  * Upload company logo
  */

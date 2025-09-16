@@ -4,75 +4,8 @@ import Employee from '../models/Employee';
 import Company from '../models/Company';
 import User from '../models/User';
 import { parseSingleFile } from '../services/fileUploadService';
+import { sendEmail } from '../utils/sendEmail';
 
-/**
-* @swagger
-* tags:
-*   name: Auth
-*   description: User authentication and registration
-*/
-
-/**
-* @swagger
-* /api/auth/register/employee:
-*   post:
-*     summary: Register a new employee
-*     tags: [Auth]
-*     requestBody:
-*       required: true
-*       content:
-*         application/json:
-*           schema:
-*             type: object
-*             required:
-*               - name
-*               - email
-*               - password
-*             properties:
-*               name:
-*                 type: string
-*                 example: John Doe
-*               email:
-*                 type: string
-*                 format: email
-*                 example: john.doe@example.com
-*               password:
-*                 type: string
-*                 format: password
-*                 example: password123
-*               dateOfBirth:
-*                 type: string
-*                 format: date
-*                 example: 1990-01-01
-*               phoneNumber:
-*                 type: string
-*                 example: "+1234567890"
-*     responses:
-*       201:
-*         description: Employee registered successfully
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Employee registered successfully
-*                 employee:
-*                   $ref: '#/components/schemas/Employee'
-*       400:
-*         description: Bad request (e.g., email already exists, missing fields)
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Email already registered
-*       500:
-*         description: Server error
-*/
 export const registerEmployee = async (req: Request, res: Response) => {
 try {
   const { name, email, password, dateOfBirth, phoneNumber, jobPreferences } = req.body;
@@ -98,6 +31,21 @@ try {
     jobPreferences: Array.isArray(jobPreferences) ? jobPreferences : [],
   });
 
+  try {
+      await sendEmail({
+        type: 'employeeRegistration',
+        to: process.env.SMTP_USER || '',
+        data: {
+          employeeName: name,
+          email,
+          phoneNumber,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to notify admin about employee registration', error);
+    }
+
+  
   res.status(201).json({ message: 'Employee registered successfully', employee: employee.toJSON() });
 } catch (error) {
   console.error('Error registering employee:', error);
@@ -105,72 +53,6 @@ try {
 }
 };
 
-/**
-* @swagger
-* /api/auth/register/company:
-*   post:
-*     summary: Register a new company
-*     tags: [Auth]
-*     requestBody:
-*       required: true
-*       content:
-*         application/json:
-*           schema:
-*             type: object
-*             required:
-*               - companyName
-*               - email
-*               - password
-*             properties:
-*               companyName:
-*                 type: string
-*                 example: Tech Solutions Inc.
-*               email:
-*                 type: string
-*                 format: email
-*                 example: contact@techsolutions.com
-*               password:
-*                 type: string
-*                 format: password
-*                 example: companyPass123
-*               location:
-*                 type: string
-*                 example: New York, USA
-*               phoneNumber:
-*                 type: string
-*                 example: "+1987654321"
-*               website:
-*                 type: string
-*                 example: https://www.techsolutions.com
-*               logo:
-*                 type: string
-*                 example: https://example.com/logo.png
-*     responses:
-*       201:
-*         description: Company registered successfully (awaiting admin approval)
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Company registered successfully. Awaiting admin approval.
-*                 company:
-*                   $ref: '#/components/schemas/Company'
-*       400:
-*         description: Bad request (e.g., email already exists, missing fields)
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Email already registered
-*       500:
-*         description: Server error
-*/
 export const registerCompany = async (req: Request, res: Response) => {
 try {
   const { companyName, email, password, location, phoneNumber, website } = req.body as any;
@@ -195,13 +77,29 @@ try {
     location,
     phoneNumber,
     website,
-    // Store full file info object when provided by rod-fileupload middleware.
-    // If a legacy string URL is provided, skip setting logo to avoid schema cast errors.
     ...(logo ? { logo } : {}),
     isApproved: false, 
     status: 'pending',
     isActive: true,
   });
+
+  
+  try {
+    await sendEmail({
+      type:'companyRegistration',
+      to: process.env.SMTP_USER || '',
+      data:{
+        companyName,
+        email,
+        location,
+        website,
+        phoneNumber,
+        logo: logo?.url
+      }
+    })
+  } catch (error) {
+    console.log('Failed to notify admin about company registration', error)
+  }
   
   res.status(201).json({ message: 'Company registered successfully. Awaiting admin approval.', company: company.toJSON() });
 } catch (error) {
@@ -210,64 +108,6 @@ try {
 }
 };
 
-/**
-* @swagger
-* /api/auth/login:
-*   post:
-*     summary: Log in a user (Employee, Company, or SuperAdmin)
-*     tags: [Auth]
-*     requestBody:
-*       required: true
-*       content:
-*         application/json:
-*           schema:
-*             type: object
-*             required:
-*               - email
-*               - password
-*             properties:
-*               email:
-*                 type: string
-*                 format: email
-*                 example: john.doe@example.com
-*               password:
-*                 type: string
-*                 format: password
-*                 example: password123
-*     responses:
-*       200:
-*         description: Login successful
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Login successful
-*                 token:
-*                   type: string
-*                   example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-*                 role:
-*                   type: string
-*                   example: employee
-*                 isApproved:
-*                   type: boolean
-*                   description: Only for company role, indicates if company is approved
-*                   example: true
-*       400:
-*         description: Invalid credentials or company not approved
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Invalid credentials
-*       500:
-*         description: Server error
-*/
 export const login = async (req: Request, res: Response) => {
 try {
   const { email, password } = req.body;
@@ -331,7 +171,21 @@ export const companyCompleteProfile = async (req: Request, res: Response) => {
     const company = await Company.findByIdAndUpdate(id, { $set: updates }, { new: true }).select('-password');
     if (!company) return res.status(404).json({ message: 'Company not found' });
 
+    try {
+      await sendEmail({
+        type:'companyProfileCompletedNotify',
+        to:process.env.SMTP_USER || '',
+        data: {
+          companyName:company.companyName,
+          dashboardLink:`${process.env.FRONTEND_URL_DASHBOARD}/admin`,
+          logo: company.logo?.url
+        }
+      })
+    } catch (error) {
+      console.log("Failed send email about profile", error)
+    }
     res.status(200).json({ message: 'Details submitted', company });
+    console.log('company updated profile', company) 
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });
   }

@@ -5,60 +5,8 @@ import Company from '../models/Company';
 import Employee from '../models/Employee';
 import { comparePasswords, generateToken, hashPassword } from '../utils/authUtils';
 import { Types } from 'mongoose';
+import { sendEmail } from '../utils/sendEmail';
 
-/**
-* @swagger
-* tags:
-*   name: Admin
-*   description: SuperAdmin specific operations
-*/
-
-/**
-* @swagger
-* /api/admin/login:
-*   post:
-*     summary: Log in as SuperAdmin
-*     tags: [Admin]
-*     requestBody:
-*       required: true
-*       content:
-*         application/json:
-*           schema:
-*             type: object
-*             required:
-*               - email
-*               - password
-*             properties:
-*               email:
-*                 type: string
-*                 format: email
-*                 example: admin@joblink.com
-*               password:
-*                 type: string
-*                 format: password
-*                 example: admin123
-*     responses:
-*       200:
-*         description: Admin login successful
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Admin login successful
-*                 token:
-*                   type: string
-*                   example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-*                 role:
-*                   type: string
-*                   example: superadmin
-*       400:
-*         description: Invalid credentials
-*       500:
-*         description: Server error
-*/
 export const adminLogin = async (req: Request, res: Response) => {
 try {
   const { email, password } = req.body;
@@ -85,52 +33,7 @@ try {
 }
 };
 
-/**
-* @swagger
-* /api/admin/update-password:
-*   patch:
-*     summary: Update SuperAdmin password
-*     tags: [Admin]
-*     security:
-*       - bearerAuth: []
-*     requestBody:
-*       required: true
-*       content:
-*         application/json:
-*           schema:
-*             type: object
-*             required:
-*               - currentPassword
-*               - newPassword
-*             properties:
-*               currentPassword:
-*                 type: string
-*                 format: password
-*                 example: admin123
-*               newPassword:
-*                 type: string
-*                 format: password
-*                 example: newAdminPass456
-*     responses:
-*       200:
-*         description: Password updated successfully
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Password updated successfully
-*       400:
-*         description: Invalid current password or missing fields
-*       403:
-*         description: Access Denied
-*       404:
-*         description: Admin user not found
-*       500:
-*         description: Server error
-*/
+
 export const updateAdminPassword = async (req: Request, res: Response) => {
 try {
   const adminId = req.user?.id;
@@ -178,34 +81,6 @@ try {
 }
 };
 
-/**
-* @swagger
-* /api/admin/companies:
-*   get:
-*     summary: Get all registered companies
-*     tags: [Admin]
-*     security:
-*       - bearerAuth: []
-*     responses:
-*       200:
-*         description: Companies retrieved successfully
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: Companies retrieved successfully
-*                 companies:
-*                   type: array
-*                   items:
-*                     $ref: '#/components/schemas/Company'
-*       403:
-*         description: Access Denied
-*       500:
-*         description: Server error
-*/
 export const getCompanies = async (req: Request, res: Response) => {
 try {
   const companies = await Company.find().select('-password'); // Exclude passwords
@@ -240,6 +115,19 @@ try {
     return res.status(404).json({ message: 'Company not found' });
   }
 
+  
+  await sendEmail({
+  to: company.email,
+  type: "companyApproval",
+  data: {
+    companyName: company.companyName,
+    status: "approved",
+    message: "Congratulations! Your company has been approved.",
+    dashboardLink: `${process.env.FRONTEND_URL_DASHBOARD}/company`,
+    logo: process.env.APP_LOGO, // static logo
+  },
+});
+
   res.status(200).json({ message: 'Company approved successfully', company });
 } catch (error) {
   console.error('Error approving company:', error);
@@ -247,57 +135,6 @@ try {
 }
 };
 
-/**
- * @swagger
- * /api/admin/company/{id}/reject:
- *   patch:
- *     summary: Reject a company
- *     tags: [Admin]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: mongo-id
- *         description: ID of the company to reject
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - rejectionReason
- *             properties:
- *               rejectionReason:
- *                 type: string
- *                 description: Reason for rejection
- *                 example: "Incomplete documentation provided"
- *     responses:
- *       200:
- *         description: Company rejected successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Company rejected successfully
- *                 company:
- *                   $ref: '#/components/schemas/Company'
- *       400:
- *         description: Invalid Company ID or missing rejection reason
- *       403:
- *         description: Access Denied
- *       404:
- *         description: Company not found
- *       500:
- *         description: Server error
- */
 export const rejectCompany = async (req: Request, res: Response) => {
 try {
   const { id } = req.params;
@@ -328,6 +165,17 @@ try {
     return res.status(404).json({ message: 'Company not found' });
   }
 
+  await sendEmail({
+    to: company.email,
+    type:'companyApproval',
+    data:{
+      companyName: company.companyName,
+      status: 'rejected',
+      message: rejectionReason,
+      logo: process.env.APP_LOGO,
+    }
+  })
+
   res.status(200).json({ message: 'Company rejected successfully', company });
 } catch (error) {
   console.error('Error rejecting company:', error);
@@ -335,44 +183,6 @@ try {
 }
 };
 
-/**
- * @swagger
- * /api/admin/company/{id}/disable:
- *   patch:
- *     summary: Disable a company account
- *     tags: [Admin]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: mongo-id
- *         description: ID of the company to disable
- *     responses:
- *       200:
- *         description: Company disabled successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Company disabled successfully
- *                 company:
- *                   $ref: '#/components/schemas/Company'
- *       400:
- *         description: Invalid Company ID
- *       403:
- *         description: Access Denied
- *       404:
- *         description: Company not found
- *       500:
- *         description: Server error
- */
 export const disableCompany = async (req: Request, res: Response) => {
 try {
   const { id } = req.params;
@@ -402,44 +212,7 @@ try {
 }
 };
 
-/**
- * @swagger
- * /api/admin/company/{id}/enable:
- *   patch:
- *     summary: Re-enable a disabled company account
- *     tags: [Admin]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: mongo-id
- *         description: ID of the company to enable
- *     responses:
- *       200:
- *         description: Company enabled successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Company enabled successfully
- *                 company:
- *                   $ref: '#/components/schemas/Company'
- *       400:
- *         description: Invalid Company ID
- *       403:
- *         description: Access Denied
- *       404:
- *         description: Company not found
- *       500:
- *         description: Server error
- */
+
 export const enableCompany = async (req: Request, res: Response) => {
 try {
   const { id } = req.params;
@@ -475,42 +248,7 @@ try {
 }
 };
 
-/**
- * @swagger
- * /api/admin/company/{id}/delete:
- *   delete:
- *     summary: Permanently delete a company
- *     tags: [Admin]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: mongo-id
- *         description: ID of the company to delete
- *     responses:
- *       200:
- *         description: Company deleted successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Company deleted successfully
- *       400:
- *         description: Invalid Company ID
- *       403:
- *         description: Access Denied
- *       404:
- *         description: Company not found
- *       500:
- *         description: Server error
- */
+
 export const deleteCompany = async (req: Request, res: Response) => {
 try {
   const { id } = req.params;
@@ -540,22 +278,6 @@ try {
 }
 };
 
-/**
- * @swagger
- * /api/users:
- *   get:
- *     summary: Get all registered users (admin only)
- *     tags: [Admin]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Users retrieved successfully
- *       403:
- *         description: Access Denied
- *       500:
- *         description: Server error
- */
 export const listAllUsers = async (req: Request, res: Response) => {
   try {
     const users = await User.find().select('-password');
@@ -566,34 +288,7 @@ export const listAllUsers = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * @swagger
- * /api/admin/me:
- *   get:
- *     summary: Get logged-in SuperAdmin details
- *     tags: [Admin]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Logged-in admin details retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Admin details retrieved successfully
- *                 admin:
- *                   $ref: '#/components/schemas/User'
- *       403:
- *         description: Access Denied
- *       404:
- *         description: Admin not found
- *       500:
- *         description: Server error
- */
+
 export const getLoggedInAdmin = async (req: Request, res: Response) => {
   try {
     const adminId = req.user?.id;
@@ -631,44 +326,7 @@ export const getCompaniesPendingReview = async (req: Request, res: Response) => 
   }
 };
 
-/**
- * @swagger
- * /api/admin/company/{id}:
- *   get:
- *     summary: Get full company details for review
- *     tags: [Admin]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: mongo-id
- *         description: ID of the company to review
- *     responses:
- *       200:
- *         description: Company details retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Company details retrieved successfully
- *                 company:
- *                   $ref: '#/components/schemas/Company'
- *       400:
- *         description: Invalid Company ID
- *       403:
- *         description: Access Denied
- *       404:
- *         description: Company not found
- *       500:
- *         description: Server error
- */
+
 export const getCompanyDetailsForReview = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -695,9 +353,9 @@ export const getCompanyDetailsForReview = async (req: Request, res: Response) =>
   }
 };
 
-/**
- * Approve a company's completed profile
- */
+
+//  Approve a company's completed profile
+
 export const approveCompanyProfile = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -728,9 +386,9 @@ export const approveCompanyProfile = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * Get all employees for admin management
- */
+
+//  Get all employees for admin management
+
 export const getAllEmployees = async (req: Request, res: Response) => {
   try {
     const employees = await Employee.find({}).select('-password').sort({ createdAt: -1 });
@@ -745,9 +403,9 @@ export const getAllEmployees = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * Reject a company's completed profile
- */
+
+//  Reject a company's completed profile
+
 export const rejectCompanyProfile = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -785,9 +443,9 @@ export const rejectCompanyProfile = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * Get admin notifications
- */
+
+//  Get admin notifications
+
 export const getAdminNotifications = async (req: Request, res: Response) => {
   try {
     // For admin, we can aggregate notifications from various sources
