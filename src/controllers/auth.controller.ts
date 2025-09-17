@@ -67,7 +67,7 @@ try {
 
 export const registerCompany = async (req: Request, res: Response) => {
 try {
-  const { companyName, email, password, location, phoneNumber, website } = req.body as any;
+  const { companyName, email, password, district, province, phoneNumber, website } = req.body as any;
   const logo = parseSingleFile((req.body as any).logo);
 
   if (!companyName || !email || !password) {
@@ -86,7 +86,8 @@ try {
     email,
     password: hashedPassword,
     role: 'company',
-    location,
+    district,
+    province,
     phoneNumber,
     website,
     ...(logo ? { logo } : {}),
@@ -103,7 +104,8 @@ try {
       data:{
         companyName,
         email,
-        location,
+        district,
+        province,
         website,
         phoneNumber,
         logo: logo?.url

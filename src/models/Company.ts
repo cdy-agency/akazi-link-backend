@@ -13,6 +13,7 @@ interface IFileInfo {
   time: string;
 }
 
+
 const FileInfoSchema = new Schema<IFileInfo>({
   url: { type: String, required: true },
   public_id: { type: String, required: true },
@@ -32,35 +33,43 @@ const NotificationSchema: Schema = new Schema(
   { _id: true }
 );
 
+const TeamMemberSchema = new Schema({
+  position: { type: String, required: true },
+  phoneNumber: { type: String, required: true },
+});
+
 const CompanySchema: Schema = new Schema(
-{
-  companyName: { type: String, required: true },
-  location: { type: String },
-  phoneNumber: { type: String },
-  website: { type: String },
-  logo: { type: FileInfoSchema }, 
-  isApproved: { type: Boolean, default: false },
-  password: {type: String, required: true},
-  about: { type: String },
-  documents: { type: [FileInfoSchema], default: [] },
-  notifications: { type: [NotificationSchema], default: [] },
-  status: { 
-    type: String, 
-    enum: ['pending', 'approved', 'rejected', 'disabled', 'deleted'], 
-    default: 'pending' 
+  {
+    companyName: { type: String, required: true },
+    province: { type: String },
+    district: { type: String },
+    phoneNumber: { type: String },
+    website: { type: String },
+    logo: { type: FileInfoSchema },
+    isApproved: { type: Boolean, default: false },
+    password: { type: String, required: true },
+    about: { type: String },
+    documents: { type: [FileInfoSchema], default: [] },
+    notifications: { type: [NotificationSchema], default: [] },
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected", "disabled", "deleted"],
+      default: "pending",
+    },
+    isActive: { type: Boolean, default: true },
+    rejectionReason: { type: String },
+    disabledAt: { type: Date },
+    deletedAt: { type: Date },
+    profileCompletionStatus: {
+      type: String,
+      enum: ["incomplete", "complete", "pending_review"],
+      default: "incomplete",
+    },
+    profileCompletedAt: { type: Date },
+
+    teamMembers: { type: [TeamMemberSchema], default: [] },
   },
-  isActive: { type: Boolean, default: true },
-  rejectionReason: { type: String },
-  disabledAt: { type: Date },
-  deletedAt: { type: Date },
-  profileCompletionStatus: {
-    type: String,
-    enum: ['incomplete', 'complete', 'pending_review'],
-    default: 'incomplete'
-  },
-  profileCompletedAt: { type: Date },
-},
-{ timestamps: true }
+  { timestamps: true }
 );
 
 // Extend the User model with Company-specific fields

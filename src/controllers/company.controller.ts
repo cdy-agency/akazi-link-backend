@@ -15,6 +15,18 @@ import AdminNotification from "../models/AdminNotification";
 import Employee from "../models/Employee";
 import Application from "../models/Application";
 
+const experienceOptions = [
+  { value: "1", label: "1 year" },
+  { value: "2", label: "2 years" },
+  { value: "3+", label: "3+ years" },
+]
+
+const salaryRanges = [
+  { value: "0-50", label: "0-50k" },
+  { value: "51-100", label: "51-100k" },
+  { value: "101-150+", label: "101-150k+" },
+]
+
 
 export const getProfile = async (req: Request, res: Response) => {
   try {
@@ -74,38 +86,32 @@ export const updateProfile = async (req: Request, res: Response) => {
         .json({ message: "Access Denied: Company ID not found in token" });
     }
 
-    const { oldPassword, newPassword, logo, documents, ...updates } = req.body;
+    const { oldPassword, newPassword, logo, documents, teamMembers, ...updates } = req.body;
 
-    // Prevent updating sensitive fields like email, role, isApproved via this endpoint
     delete updates.email;
     delete updates.role;
     delete updates.isApproved;
-
-    // Block file fields here; they must go through dedicated endpoints to ensure proper FileInfo typing
     delete (updates as any).logo;
     delete (updates as any).documents;
 
-    // Handle password change if new password is provided
     if (newPassword) {
       if (!oldPassword) {
-        return res
-          .status(400)
-          .json({
-            message: "Old password is required when setting a new password",
-          });
+        return res.status(400).json({ message: "Old password is required" });
       }
-
       const company = await Company.findById(companyId);
       if (!company) {
         return res.status(404).json({ message: "Company not found" });
       }
-
       const isMatch = await comparePasswords(oldPassword, company.password);
       if (!isMatch) {
         return res.status(400).json({ message: "Invalid old password" });
       }
-
       updates.password = await hashPassword(newPassword);
+    }
+
+    // If teamMembers provided, set it
+    if (teamMembers && Array.isArray(teamMembers)) {
+      updates.teamMembers = teamMembers;
     }
 
     const company = await Company.findByIdAndUpdate(
@@ -113,20 +119,18 @@ export const updateProfile = async (req: Request, res: Response) => {
       { $set: updates },
       { new: true, runValidators: true }
     ).select("-password");
+
     if (!company) {
       return res.status(404).json({ message: "Company not found" });
     }
 
-    // Recompute profile completion state if relevant fields changed (e.g., about)
     await recomputeProfileCompletionStatus(companyId);
     const refreshed = await Company.findById(companyId).select("-password");
 
-    res
-      .status(200)
-      .json({
-        message: "Company profile updated successfully",
-        company: refreshed,
-      });
+    res.status(200).json({
+      message: "Company profile updated successfully",
+      company: refreshed,
+    });
   } catch (error) {
     console.error("Error updating company profile:", error);
     res.status(500).json({ message: "Server error" });
@@ -209,70 +213,7 @@ export const completeCompanyProfile = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * @swagger
- * /api/company/job:
- *   post:
- *     summary: Post a new job
- *     tags: [Company]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - title
- *               - description
- *               - employmentType
- *               - category
- *             properties:
- *               title:
- *                 type: string
- *                 example: Software Engineer
- *               description:
- *                 type: string
- *                 example: We are looking for a skilled software engineer...
- *               skills:
- *                 type: array
- *                 items:
- *                   type: string
- *                 example: ["Node.js", "React", "MongoDB"]
- *               experience:
- *                 type: string
- *                 example: 3+ years
- *               employmentType:
- *                 type: string
- *                 enum: [fulltime, part-time, internship]
- *                 example: fulltime
- *               salary:
- *                 type: string
- *                 example: $80,000 - $120,000
- *               category:
- *                 type: string
- *                 example: IT & Software
- *     responses:
- *       201:
- *         description: Job posted successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Job posted successfully
- *                 job:
- *                   $ref: '#/components/schemas/Job'
- *       400:
- *         description: Bad request (e.g., missing fields)
- *       403:
- *         description: Access Denied (e.g., company not approved)
- *       500:
- *         description: Server error
- */
+
 export const postJob = async (req: Request, res: Response) => {
   try {
     const companyId = req.user?.id;
@@ -288,9 +229,9 @@ export const postJob = async (req: Request, res: Response) => {
       image,
       skills,
       experience,
-      location,
-      salaryMin,
-      salaryMax,
+      province,
+      district, 
+      salary,
       employmentType,
       applicationDeadline,
       category,
@@ -310,13 +251,13 @@ export const postJob = async (req: Request, res: Response) => {
     const job = await Job.create({
       title,
       description,
-      location,
+      province,
+      district,
       skills,
       ...(image && typeof image === "object" ? { image } : {}),
       experience,
       employmentType,
-      salaryMin,
-      salaryMax,
+      salary,
       category,
       benefits: Array.isArray(benefits) ? benefits : [],
       responsibilities: Array.isArray(responsibilities) ? responsibilities : [],
@@ -372,11 +313,11 @@ export const updateJob = async (req: Request, res: Response) => {
     const fields = [
       'title',
       'description',
-      'location',
+      'district',
+      'province',
       'experience',
       'employmentType',
-      'salaryMin',
-      'salaryMax',
+      'salary',
       'category',
       'applicationDeadline',
     ] as const;
