@@ -136,21 +136,25 @@ try {
     return res.status(400).json({ message: 'Invalid Job ID' });
   }
 
-  const job = await Job.findById(jobId);
+  const job = await Job.findById(jobId).populate('companyId', 'email companyName');
   if (!job) {
     return res.status(404).json({ message: 'Job not found' });
   }
 
-  sendEmail({
-    to:(job.companyId as any).email,
-    type: 'jobApplication',
-    data: {
-      applicantName: employee?.name || "",
-      applicantEmail: employee?.email || "",
-      jobTitle: job.title,
-      jobId: job.id
-    }
-  })
+  try {
+    await sendEmail({
+      to: (job.companyId as any).email,
+      type: 'jobApplication',
+      data: {
+        applicantName: employee?.name || '',
+        applicantEmail: employee?.email || '',
+        jobTitle: job.title,
+        jobId: (job._id as any).toString()
+      }
+    });
+  } catch (emailError) {
+    console.error('Failed to send job application email', emailError);
+  }
 
   const existingApplication = await Application.findOne({ jobId, employeeId });
   if (existingApplication) {
@@ -170,6 +174,21 @@ try {
     appliedVia: appliedVia || 'normal',
     status: 'pending',
   });
+
+  // Create system notification for the company
+  try {
+    await Application.findByIdAndUpdate(application._id, {
+      $push: {
+        notifications: {
+          message: `New application received for ${job.title}`,
+          read: false,
+          createdAt: new Date(),
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Failed to create system notification for company on job application', error);
+  }
 
   res.status(201).json({ message: 'Application submitted successfully', application });
 } catch (error) {
@@ -209,10 +228,15 @@ try {
     return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
   }
 
-  // Find applications for the employee and return their notifications
-  const applications = await Application.find({ employeeId }).select('notifications');
+  // Find applications and work requests for the employee and return their notifications
+  const [applications, workRequests] = await Promise.all([
+    Application.find({ employeeId }).select('notifications'),
+    WorkRequest.find({ employeeId }).select('notifications')
+  ]);
 
-  const allNotifications = applications.flatMap(app => app.notifications);
+  const applicationNotifications = applications.flatMap((app: any) => app.notifications as any[]);
+  const workRequestNotifications = workRequests.flatMap((wr: any) => wr.notifications as any[]);
+  const allNotifications = [...applicationNotifications, ...workRequestNotifications];
 
   // Optionally, mark notifications as read after fetching them
   // await Application.updateMany(
@@ -276,28 +300,20 @@ export const markNotificationRead = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Invalid notification ID' });
     }
 
-    // Find the application that contains this notification
-    const application = await Application.findOne({
-      employeeId,
-      'notifications._id': notificationId
-    });
+    // Try update on Application notifications
+    const appUpdated = await Application.updateOne(
+      { employeeId, 'notifications._id': notificationId },
+      { $set: { 'notifications.$.read': true } }
+    );
+    // Try update on WorkRequest notifications
+    const wrUpdated = await WorkRequest.updateOne(
+      { employeeId, 'notifications._id': notificationId },
+      { $set: { 'notifications.$.read': true } }
+    );
 
-    if (!application) {
+    if (appUpdated.modifiedCount === 0 && wrUpdated.modifiedCount === 0) {
       return res.status(404).json({ message: 'Notification not found' });
     }
-
-    // Mark the specific notification as read
-    await Application.updateOne(
-      { 
-        employeeId, 
-        'notifications._id': notificationId 
-      },
-      { 
-        $set: { 
-          'notifications.$.read': true 
-        } 
-      }
-    );
 
     res.status(200).json({ message: 'Notification marked as read' });
   } catch (error) {
@@ -319,20 +335,18 @@ export const deleteEmployeeNotification = async (req: Request, res: Response) =>
       return res.status(400).json({ message: 'Invalid notification ID' });
     }
 
-    // Find and delete the notification from the application
-    const result = await Application.updateOne(
-      { 
-        employeeId, 
-        'notifications._id': notificationId 
-      },
-      { 
-        $pull: { 
-          notifications: { _id: notificationId } 
-        } 
-      }
+    // Delete from Application notifications
+    const appResult = await Application.updateOne(
+      { employeeId, 'notifications._id': notificationId },
+      { $pull: { notifications: { _id: notificationId } } }
+    );
+    // Delete from WorkRequest notifications
+    const wrResult = await WorkRequest.updateOne(
+      { employeeId, 'notifications._id': notificationId },
+      { $pull: { notifications: { _id: notificationId } } }
     );
 
-    if (result.modifiedCount === 0) {
+    if (appResult.modifiedCount === 0 && wrResult.modifiedCount === 0) {
       return res.status(404).json({ message: 'Notification not found' });
     }
 

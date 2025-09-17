@@ -17,7 +17,8 @@ export type CompanyRegistrationOptions = BaseEmailOptions & {
   data: {
     companyName: string;
     email: string;
-    location?: string;
+    district?: string;
+    province?: string;
     website?: string;
     phoneNumber?: string;
     description?: string;
