@@ -68,6 +68,8 @@ export interface IJob extends Document {
   benefits?: string[];
   companyId: Types.ObjectId;
   applicationDeadline: string;
+  applicationDeadlineAt?: Date;
+  isActive?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
