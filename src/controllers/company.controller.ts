@@ -181,70 +181,7 @@ export const completeCompanyProfile = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * @swagger
- * /api/company/job:
- *   post:
- *     summary: Post a new job
- *     tags: [Company]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - title
- *               - description
- *               - employmentType
- *               - category
- *             properties:
- *               title:
- *                 type: string
- *                 example: Software Engineer
- *               description:
- *                 type: string
- *                 example: We are looking for a skilled software engineer...
- *               skills:
- *                 type: array
- *                 items:
- *                   type: string
- *                 example: ["Node.js", "React", "MongoDB"]
- *               experience:
- *                 type: string
- *                 example: 3+ years
- *               employmentType:
- *                 type: string
- *                 enum: [fulltime, part-time, internship]
- *                 example: fulltime
- *               salary:
- *                 type: string
- *                 example: $80,000 - $120,000
- *               category:
- *                 type: string
- *                 example: IT & Software
- *     responses:
- *       201:
- *         description: Job posted successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Job posted successfully
- *                 job:
- *                   $ref: '#/components/schemas/Job'
- *       400:
- *         description: Bad request (e.g., missing fields)
- *       403:
- *         description: Access Denied (e.g., company not approved)
- *       500:
- *         description: Server error
- */
+
 export const postJob = async (req: Request, res: Response) => {
   try {
     const companyId = req.user?.id;
@@ -260,7 +197,8 @@ export const postJob = async (req: Request, res: Response) => {
       image,
       skills,
       experience,
-      location,
+      district,
+      province, 
       salaryMin,
       salaryMax,
       employmentType,
@@ -287,7 +225,8 @@ export const postJob = async (req: Request, res: Response) => {
     const job = await Job.create({
       title,
       description,
-      location,
+      district,
+      province, 
       skills,
       ...(image && typeof image === "object" ? { image } : {}),
       experience,
@@ -350,11 +289,11 @@ export const updateJob = async (req: Request, res: Response) => {
     const fields = [
       'title',
       'description',
-      'location',
+      'province',
+      'district',
       'experience',
       'employmentType',
-      'salaryMin',
-      'salaryMax',
+      'salary',
       'category',
       'applicationDeadline',
     ] as const;
@@ -603,7 +542,7 @@ export const updateApplicationStatus = async (req: Request, res: Response) => {
   try {
     const { applicationId } = req.params as { applicationId: string };
     const { status } = req.body as {
-      status: "pending" | "reviewed" | "interview" | "hired" | "rejected";
+      status: "pending" | "hired" | "rejected";
     };
     const companyId = req.user?.id;
 
@@ -617,7 +556,7 @@ export const updateApplicationStatus = async (req: Request, res: Response) => {
     }
     if (
       !status ||
-      !["pending", "reviewed", "interview", "hired", "rejected"].includes(
+      !["pending", "hired", "rejected"].includes(
         status
       )
     ) {

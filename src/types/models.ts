@@ -57,7 +57,8 @@ export interface IJob extends Document {
   title: string; 
   description: string;
   skills: string[];
-  location: string,
+  province: string,
+  district: string,
   image: IFileInfo;
   experience: string;
   employmentType: "fulltime" | "part-time" | "internship";
