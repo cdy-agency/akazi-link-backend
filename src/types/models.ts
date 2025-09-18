@@ -89,7 +89,7 @@ export interface IApplication extends Document {
   resume?: string,
   coverLetter?: string,
   appliedVia: "normal" | "whatsapp" | "referral";
-  status: "pending" | "reviewed" | "interview" | "hired" | "rejected";
+  status: "pending" | "hired" | "rejected";
   notifications: INotification[];
   createdAt: Date;
   updatedAt: Date;
