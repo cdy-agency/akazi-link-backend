@@ -29,7 +29,9 @@ const JobSchema: Schema = new Schema(
   responsibilities: { type: [String], default: [] , required: true},
   benefits: { type: [String], default: [], required: true },
   companyId: { type: Types.ObjectId, ref: 'Company', required: true },
-  applicationDeadline: { type: String }
+  applicationDeadline: { type: String },
+  applicationDeadlineAt: { type: Date },
+  isActive: { type: Boolean, default: true }
 },
 { timestamps: true }
 );

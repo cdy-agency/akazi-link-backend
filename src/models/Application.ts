@@ -36,7 +36,7 @@ const ApplicationSchema: Schema = new Schema(
   },
   status: {
     type: String,
-    enum: ['pending', 'reviewed', 'interview', 'hired', 'rejected'],
+    enum: ['pending', 'hired', 'rejected'],
     default: 'pending',
   },
   notifications: { type: [NotificationSchema], default: [] },

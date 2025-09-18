@@ -19,6 +19,7 @@ import {
   markCompanyNotificationRead,
   deleteCompanyNotification,
   updateJob,
+  toggleJobStatus,
   deleteJob,
   deactivateCompanyAccount,
   activateCompanyAccount,
@@ -46,6 +47,8 @@ router.patch('/complete-profile', authorizeCompany({ requireApproval: false, all
 router.post('/job', authorizeCompany({ requireApproval: true }), uploadSingle('image', cloudinary), postJob);
 // Update existing job
 router.patch('/job/:id', authorizeCompany({ requireApproval: true }), uploadSingle('image', cloudinary), updateJob);
+// Toggle job active status
+router.patch('/job/:id/status', authorizeCompany({ requireApproval: true }), toggleJobStatus);
 // Delete existing job
 router.delete('/job/:id', authorizeCompany({ requireApproval: true }), deleteJob);
 

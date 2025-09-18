@@ -76,7 +76,14 @@ export const updateEmployeeProfile = async (req: Request, res: Response) => {
 export const getJobsByCategory = async (req: Request, res: Response) => {
 try {
   const { category } = req.query;
-  const query: any = {};
+  const now = new Date();
+  const query: any = {
+    isActive: true,
+    $or: [
+      { applicationDeadlineAt: { $exists: false } },
+      { applicationDeadlineAt: { $gt: now } }
+    ]
+  };
 
   if (category && typeof category === 'string') {
     query.category = category;
@@ -95,7 +102,14 @@ export const getJobSuggestions = async (req: Request, res: Response) => {
 try {
   const employeeId = req.user?.id;
   const { category } = req.query;
-  const query: any = {};
+  const now = new Date();
+  const query: any = {
+    isActive: true,
+    $or: [
+      { applicationDeadlineAt: { $exists: false } },
+      { applicationDeadlineAt: { $gt: now } }
+    ]
+  };
 
   if (category && typeof category === 'string') {
     query.category = category;

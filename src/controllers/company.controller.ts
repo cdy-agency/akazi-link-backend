@@ -248,6 +248,11 @@ export const postJob = async (req: Request, res: Response) => {
         });
     }
 
+    // Compute deadline date if provided
+    const applicationDeadlineAt = applicationDeadline
+      ? new Date(applicationDeadline)
+      : undefined;
+
     const job = await Job.create({
       title,
       description,
@@ -262,6 +267,7 @@ export const postJob = async (req: Request, res: Response) => {
       benefits: Array.isArray(benefits) ? benefits : [],
       responsibilities: Array.isArray(responsibilities) ? responsibilities : [],
       applicationDeadline,
+      ...(applicationDeadlineAt ? { applicationDeadlineAt } : {}),
       companyId,
     });
     res.status(201).json({ message: "Job posted successfully", job });
@@ -334,12 +340,37 @@ export const updateJob = async (req: Request, res: Response) => {
     if (typeof benefits !== 'undefined') set.benefits = benefits;
 
     // Image (if provided by rod-fileupload, it'll be an object with url)
-    const image = parseSingleFileUpload(bodyAny.image);
-    if (image) set.image = image;
+    // Allow explicit image removal when bodyAny.image === null or 'delete'
+    if (bodyAny.image === null || bodyAny.image === 'delete') {
+      set.image = undefined;
+      (set as any).$unset = { image: 1 };
+    } else {
+      const image = parseSingleFileUpload(bodyAny.image);
+      if (image) set.image = image;
+    }
+
+    // Handle deadline update
+    if (typeof bodyAny.applicationDeadline !== 'undefined') {
+      const deadlineStr = bodyAny.applicationDeadline;
+      set.applicationDeadline = deadlineStr;
+      const dt = deadlineStr ? new Date(deadlineStr) : undefined;
+      if (dt && !isNaN(dt.getTime())) {
+        set.applicationDeadlineAt = dt;
+      } else {
+        (set as any).$unset = { ...(set as any).$unset, applicationDeadlineAt: 1 };
+      }
+    }
+
+    // Merge $set and optional $unset
+    const updateOps: any = { $set: set };
+    if ((set as any).$unset) {
+      updateOps.$unset = (set as any).$unset;
+      delete (set as any).$unset;
+    }
 
     const updated = await Job.findByIdAndUpdate(
       id,
-      { $set: set },
+      updateOps,
       { new: true, runValidators: true }
     );
 
@@ -485,6 +516,7 @@ export const getCompanyJobs = async (req: Request, res: Response) => {
     }
 
     const jobs = await Job.find({ companyId });
+    // Optionally: mark expired ones as inactive on the fly (do not persist automatically)
     res.status(200).json({ message: "Jobs retrieved successfully", jobs });
   } catch (error) {
     console.error("Error getting company jobs:", error);
@@ -540,7 +572,7 @@ export const updateApplicationStatus = async (req: Request, res: Response) => {
   try {
     const { applicationId } = req.params as { applicationId: string };
     const { status } = req.body as {
-      status: "pending" | "reviewed" | "interview" | "hired" | "rejected";
+      status: "pending" | "hired" | "rejected";
     };
     const companyId = req.user?.id;
 
@@ -554,7 +586,7 @@ export const updateApplicationStatus = async (req: Request, res: Response) => {
     }
     if (
       !status ||
-      !["pending", "reviewed", "interview", "hired", "rejected"].includes(
+      !["pending", "hired", "rejected"].includes(
         status
       )
     ) {
@@ -738,6 +770,12 @@ export const uploadDocuments = async (req: Request, res: Response) => {
         .json({ message: "Access Denied: Company ID not found in token" });
     }
 
+    // Restrict modifying documents after approval
+    const companyStatus = await Company.findById(companyId).select("isApproved status");
+    if (companyStatus?.isApproved && companyStatus.status === 'approved') {
+      return res.status(403).json({ message: "Documents cannot be modified after approval" });
+    }
+
     const documents = parseMultipleFiles((req.body as any).documents);
     if (!documents || documents.length === 0) {
       return res.status(400).json({ message: "No documents uploaded" });
@@ -801,6 +839,12 @@ export const updateDocuments = async (req: Request, res: Response) => {
       return res
         .status(403)
         .json({ message: "Access Denied: Company ID not found in token" });
+    }
+
+    // Restrict modifying documents after approval
+    const companyStatus = await Company.findById(companyId).select("isApproved status");
+    if (companyStatus?.isApproved && companyStatus.status === 'approved') {
+      return res.status(403).json({ message: "Documents cannot be modified after approval" });
     }
 
     const documents = parseMultipleFiles((req.body as any).documents);
@@ -886,6 +930,12 @@ export const deleteDocument = async (req: Request, res: Response) => {
         .json({ message: "Access Denied: Company ID not found in token" });
     }
 
+    // Restrict modifying documents after approval
+    const companyStatus = await Company.findById(companyId).select("isApproved status");
+    if (companyStatus?.isApproved && companyStatus.status === 'approved') {
+      return res.status(403).json({ message: "Documents cannot be modified after approval" });
+    }
+
     const documentIndex = parseInt(index);
     if (isNaN(documentIndex) || documentIndex < 0) {
       return res.status(400).json({ message: "Invalid document index" });
@@ -927,6 +977,41 @@ export const deleteDocument = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error deleting document:", error);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Toggle a job's active status (activate/deactivate), owned by the authenticated company
+ */
+export const toggleJobStatus = async (req: Request, res: Response) => {
+  try {
+    const companyId = req.user?.id;
+    const { id } = req.params as { id: string };
+    const { isActive } = req.body as { isActive: boolean };
+
+    if (!companyId) {
+      return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
+    }
+    if (!Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid Job ID' });
+    }
+    if (typeof isActive !== 'boolean') {
+      return res.status(400).json({ message: 'isActive must be a boolean' });
+    }
+
+    const job = await Job.findById(id);
+    if (!job) return res.status(404).json({ message: 'Job not found' });
+    if (job.companyId.toString() !== companyId) {
+      return res.status(403).json({ message: 'Access Denied: You do not own this job' });
+    }
+
+    job.isActive = isActive;
+    await job.save();
+
+    res.status(200).json({ message: 'Job status updated', job });
+  } catch (error) {
+    console.error('Error toggling job status:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 

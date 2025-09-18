@@ -42,7 +42,14 @@ import User from '../models/User';
 export const listPublicJobs = async (req: Request, res: Response) => {
   try {
     const { category } = req.query;
-    const query: any = {};
+    const now = new Date();
+    const query: any = {
+      isActive: true,
+      $or: [
+        { applicationDeadlineAt: { $exists: false } },
+        { applicationDeadlineAt: { $gt: now } }
+      ]
+    };
 
     if (category && typeof category === 'string') {
       query.category = category;
@@ -75,8 +82,15 @@ export const listPublicUsers = async (req: Request, res: Response) => {
 export const getPublicJobById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const job = await Job.findById(id)
-      .populate('companyId', 'companyName logo location about');
+    const now = new Date();
+    const job = await Job.findOne({
+      _id: id,
+      isActive: true,
+      $or: [
+        { applicationDeadlineAt: { $exists: false } },
+        { applicationDeadlineAt: { $gt: now } }
+      ]
+    }).populate('companyId', 'companyName logo location about');
 
     if (!job) {
       return res.status(404).json({ message: 'Job not found' });
