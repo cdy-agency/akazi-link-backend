@@ -5,6 +5,7 @@ import Company from '../models/Company';
 import User from '../models/User';
 import { parseSingleFile } from '../services/fileUploadService';
 import { sendEmail } from '../utils/sendEmail';
+import AdminNotification from '../models/AdminNotification';
 
 export const registerEmployee = async (req: Request, res: Response) => {
 try {
@@ -45,6 +46,17 @@ try {
       console.error('Failed to notify admin about employee registration', error);
     }
 
+  // Create admin system notification
+  try {
+    await AdminNotification.create({
+      message: `New employee registered: ${name} (${email})`,
+      read: false,
+      createdAt: new Date(),
+    });
+  } catch (error) {
+    console.error('Failed to create admin system notification for employee registration', error);
+  }
+
   
   res.status(201).json({ message: 'Employee registered successfully', employee: employee.toJSON() });
 } catch (error) {
@@ -55,7 +67,7 @@ try {
 
 export const registerCompany = async (req: Request, res: Response) => {
 try {
-  const { companyName, email, password, location, phoneNumber, website } = req.body as any;
+  const { companyName, email, password, district, province, phoneNumber, website } = req.body as any;
   const logo = parseSingleFile((req.body as any).logo);
 
   if (!companyName || !email || !password) {
@@ -74,7 +86,8 @@ try {
     email,
     password: hashedPassword,
     role: 'company',
-    location,
+    district,
+    province,
     phoneNumber,
     website,
     ...(logo ? { logo } : {}),
@@ -91,7 +104,8 @@ try {
       data:{
         companyName,
         email,
-        location,
+        district,
+        province,
         website,
         phoneNumber,
         logo: logo?.url
@@ -99,6 +113,17 @@ try {
     })
   } catch (error) {
     console.log('Failed to notify admin about company registration', error)
+  }
+
+  // Create admin system notification
+  try {
+    await AdminNotification.create({
+      message: `New company registered: ${companyName} (${email})`,
+      read: false,
+      createdAt: new Date(),
+    });
+  } catch (error) {
+    console.error('Failed to create admin system notification for company registration', error);
   }
   
   res.status(201).json({ message: 'Company registered successfully. Awaiting admin approval.', company: company.toJSON() });
@@ -183,6 +208,16 @@ export const companyCompleteProfile = async (req: Request, res: Response) => {
       })
     } catch (error) {
       console.log("Failed send email about profile", error)
+    }
+    // Create admin system notification
+    try {
+      await AdminNotification.create({
+        message: `Company profile completed: ${company.companyName}`,
+        read: false,
+        createdAt: new Date(),
+      });
+    } catch (error) {
+      console.error('Failed to create admin system notification for company profile completion', error);
     }
     res.status(200).json({ message: 'Details submitted', company });
     console.log('company updated profile', company) 

@@ -11,6 +11,12 @@ export interface IFileInfo {
   time: string;
 }
 
+export interface ITeamMemberNumber {
+  position: string;
+  phoneNumber: string;
+}
+
+
 export interface IUser extends Document {
   email: string;
   image?: string;
@@ -23,7 +29,8 @@ export interface IUser extends Document {
 
 export interface ICompany extends IUser {
   companyName: string;
-  location?: string;
+  province?: string;
+  district?: string;
   phoneNumber?: string;
   website?: string;
   logo?: IFileInfo; // Updated to store file info object
@@ -37,6 +44,8 @@ export interface ICompany extends IUser {
   deletedAt?: Date;
   profileCompletionStatus: "incomplete" | "complete" | "pending_review";
   profileCompletedAt?: Date;
+  notifications?: INotification[];
+  teamMembers?: ITeamMemberNumber[];
 }
 
 export interface IEmployee extends IUser {
@@ -63,8 +72,7 @@ export interface IJob extends Document {
   experience: string;
   employmentType: "fulltime" | "part-time" | "internship";
     category: string;
-  salaryMin: string,
-  salaryMax: string,
+  salary: string,
   responsibilities?: string[],
   benefits?: string[];
   companyId: Types.ObjectId;

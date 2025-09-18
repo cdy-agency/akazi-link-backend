@@ -2,7 +2,6 @@
 import { Request, Response } from "express";
 import Company from "../models/Company";
 import Job from "../models/Job";
-import Application from "../models/Application";
 import { Types } from "mongoose";
 import WorkRequest from "../models/WorkRequest";
 import { comparePasswords, hashPassword } from "../utils/authUtils";
@@ -12,7 +11,21 @@ import cloudinary from "../config/cloudinary";
 import { v2 as cloudinarySdk } from "cloudinary";
 import { parseSingleFile as parseSingleFileUpload } from '../services/fileUploadService';
 import { sendEmail } from "../utils/sendEmail";
+import AdminNotification from "../models/AdminNotification";
 import Employee from "../models/Employee";
+import Application from "../models/Application";
+
+const experienceOptions = [
+  { value: "1", label: "1 year" },
+  { value: "2", label: "2 years" },
+  { value: "3+", label: "3+ years" },
+]
+
+const salaryRanges = [
+  { value: "0-50", label: "0-50k" },
+  { value: "51-100", label: "51-100k" },
+  { value: "101-150+", label: "101-150k+" },
+]
 
 
 export const getProfile = async (req: Request, res: Response) => {
@@ -73,38 +86,32 @@ export const updateProfile = async (req: Request, res: Response) => {
         .json({ message: "Access Denied: Company ID not found in token" });
     }
 
-    const { oldPassword, newPassword, logo, documents, ...updates } = req.body;
+    const { oldPassword, newPassword, logo, documents, teamMembers, ...updates } = req.body;
 
-    // Prevent updating sensitive fields like email, role, isApproved via this endpoint
     delete updates.email;
     delete updates.role;
     delete updates.isApproved;
-
-    // Block file fields here; they must go through dedicated endpoints to ensure proper FileInfo typing
     delete (updates as any).logo;
     delete (updates as any).documents;
 
-    // Handle password change if new password is provided
     if (newPassword) {
       if (!oldPassword) {
-        return res
-          .status(400)
-          .json({
-            message: "Old password is required when setting a new password",
-          });
+        return res.status(400).json({ message: "Old password is required" });
       }
-
       const company = await Company.findById(companyId);
       if (!company) {
         return res.status(404).json({ message: "Company not found" });
       }
-
       const isMatch = await comparePasswords(oldPassword, company.password);
       if (!isMatch) {
         return res.status(400).json({ message: "Invalid old password" });
       }
-
       updates.password = await hashPassword(newPassword);
+    }
+
+    // If teamMembers provided, set it
+    if (teamMembers && Array.isArray(teamMembers)) {
+      updates.teamMembers = teamMembers;
     }
 
     const company = await Company.findByIdAndUpdate(
@@ -112,20 +119,18 @@ export const updateProfile = async (req: Request, res: Response) => {
       { $set: updates },
       { new: true, runValidators: true }
     ).select("-password");
+
     if (!company) {
       return res.status(404).json({ message: "Company not found" });
     }
 
-    // Recompute profile completion state if relevant fields changed (e.g., about)
     await recomputeProfileCompletionStatus(companyId);
     const refreshed = await Company.findById(companyId).select("-password");
 
-    res
-      .status(200)
-      .json({
-        message: "Company profile updated successfully",
-        company: refreshed,
-      });
+    res.status(200).json({
+      message: "Company profile updated successfully",
+      company: refreshed,
+    });
   } catch (error) {
     console.error("Error updating company profile:", error);
     res.status(500).json({ message: "Server error" });
@@ -166,8 +171,35 @@ export const completeCompanyProfile = async (req: Request, res: Response) => {
 
     if (!company) return res.status(404).json({ message: "Company not found" });
 
-    await recomputeProfileCompletionStatus(companyId);
+    const prevStatus = company.profileCompletionStatus;
+    const nextStatus = await recomputeProfileCompletionStatus(companyId);
     const refreshed = await Company.findById(companyId).select("-password");
+
+    // If transitioned to pending_review, notify admin via email and system
+    if (prevStatus !== "pending_review" && nextStatus === "pending_review") {
+      try {
+        await sendEmail({
+          type: "companyProfileCompletedNotify",
+          to: process.env.SMTP_USER || "",
+          data: {
+            companyName: refreshed?.companyName || company.companyName,
+            dashboardLink: `${process.env.FRONTEND_URL_DASHBOARD}/admin`,
+            logo: refreshed?.logo?.url || company.logo?.url,
+          },
+        });
+      } catch (emailErr) {
+        console.error("Failed to send admin email for profile completion", emailErr);
+      }
+      try {
+        await AdminNotification.create({
+          message: `Company profile completed: ${refreshed?.companyName || company.companyName}`,
+          read: false,
+          createdAt: new Date(),
+        });
+      } catch (notifErr) {
+        console.error("Failed to create admin system notification for profile completion", notifErr);
+      }
+    }
 
     res
       .status(200)
@@ -197,10 +229,9 @@ export const postJob = async (req: Request, res: Response) => {
       image,
       skills,
       experience,
-      district,
-      province, 
-      salaryMin,
-      salaryMax,
+      province,
+      district, 
+      salary,
       employmentType,
       applicationDeadline,
       category,
@@ -225,14 +256,13 @@ export const postJob = async (req: Request, res: Response) => {
     const job = await Job.create({
       title,
       description,
+      province,
       district,
-      province, 
       skills,
       ...(image && typeof image === "object" ? { image } : {}),
       experience,
       employmentType,
-      salaryMin,
-      salaryMax,
+      salary,
       category,
       benefits: Array.isArray(benefits) ? benefits : [],
       responsibilities: Array.isArray(responsibilities) ? responsibilities : [],
@@ -289,8 +319,8 @@ export const updateJob = async (req: Request, res: Response) => {
     const fields = [
       'title',
       'description',
-      'province',
       'district',
+      'province',
       'experience',
       'employmentType',
       'salary',
@@ -655,7 +685,7 @@ export const sendWorkRequest = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Employee not found" });
     }
 
-    // Create work request
+    // Create work request with initial employee notification
     const work = await WorkRequest.create({
       companyId,
       employeeId,
@@ -689,6 +719,8 @@ export const sendWorkRequest = async (req: Request, res: Response) => {
     } catch (emailError) {
       console.error("Failed to send job offer email", emailError);
     }
+
+    // System notification for employee stored on WorkRequest already done above
 
     res.status(201).json({ message: "Work request sent", work });
   } catch (error) {
@@ -1037,16 +1069,24 @@ export const getCompanyNotifications = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
     }
 
-    // Get notifications from work requests and applications
-    const workRequests = await WorkRequest.find({ companyId }).select('notifications');
-    const applications = await Application.find({ 
-      jobId: { $in: await Job.find({ companyId }).select('_id') }
-    }).select('notifications');
+    // Get notifications from company document, work requests, and applications
+    const [companyDoc, workRequests, jobDocs] = await Promise.all([
+      Company.findById(companyId).select('notifications'),
+      WorkRequest.find({ companyId }).select('notifications'),
+      Job.find({ companyId }).select('_id')
+    ]);
+    const jobIds = jobDocs.map(j => j._id);
+    const applications = await Application.find({ jobId: { $in: jobIds } }).select('notifications');
 
-    const workRequestNotifications = workRequests.flatMap(wr => wr.notifications);
-    const applicationNotifications = applications.flatMap(app => app.notifications);
+    const companyNotifications = (companyDoc?.notifications as any[]) || [];
+    const workRequestNotifications = workRequests.flatMap(wr => wr.notifications as any[]);
+    const applicationNotifications = applications.flatMap(app => app.notifications as any[]);
 
-    const allNotifications = [...workRequestNotifications, ...applicationNotifications];
+    const allNotifications = [
+      ...companyNotifications,
+      ...workRequestNotifications,
+      ...applicationNotifications,
+    ];
 
     res.status(200).json({ 
       message: 'Company notifications retrieved successfully', 
@@ -1073,6 +1113,11 @@ export const markCompanyNotificationRead = async (req: Request, res: Response) =
     if (!Types.ObjectId.isValid(notificationId)) {
       return res.status(400).json({ message: 'Invalid notification ID' });
     }
+    // Try update on Company.notifications first
+    const companyUpdated = await Company.updateOne(
+      { _id: companyId, 'notifications._id': notificationId },
+      { $set: { 'notifications.$.read': true } }
+    );
 
     // Find and update notification in work requests
     const workRequestUpdated = await WorkRequest.updateOne(
@@ -1088,7 +1133,7 @@ export const markCompanyNotificationRead = async (req: Request, res: Response) =
     );
 
     // Find and update notification in applications
-    const jobIds = await Job.find({ companyId }).select('_id');
+    const jobIds = (await Job.find({ companyId }).select('_id')).map(j => j._id);
     const applicationUpdated = await Application.updateOne(
       { 
         jobId: { $in: jobIds }, 
@@ -1101,7 +1146,11 @@ export const markCompanyNotificationRead = async (req: Request, res: Response) =
       }
     );
 
-    if (workRequestUpdated.modifiedCount === 0 && applicationUpdated.modifiedCount === 0) {
+    if (
+      companyUpdated.modifiedCount === 0 &&
+      workRequestUpdated.modifiedCount === 0 &&
+      applicationUpdated.modifiedCount === 0
+    ) {
       return res.status(404).json({ message: 'Notification not found' });
     }
 
@@ -1127,6 +1176,11 @@ export const deleteCompanyNotification = async (req: Request, res: Response) => 
     if (!Types.ObjectId.isValid(notificationId)) {
       return res.status(400).json({ message: 'Invalid notification ID' });
     }
+    // Try delete from Company.notifications first
+    const companyUpdated = await Company.updateOne(
+      { _id: companyId, 'notifications._id': notificationId },
+      { $pull: { notifications: { _id: notificationId } } }
+    );
 
     // Find and delete notification from work requests
     const workRequestUpdated = await WorkRequest.updateOne(
@@ -1142,7 +1196,7 @@ export const deleteCompanyNotification = async (req: Request, res: Response) => 
     );
 
     // Find and delete notification from applications
-    const jobIds = await Job.find({ companyId }).select('_id');
+    const jobIds = (await Job.find({ companyId }).select('_id')).map(j => j._id);
     const applicationUpdated = await Application.updateOne(
       { 
         jobId: { $in: jobIds }, 
@@ -1155,7 +1209,11 @@ export const deleteCompanyNotification = async (req: Request, res: Response) => 
       }
     );
 
-    if (workRequestUpdated.modifiedCount === 0 && applicationUpdated.modifiedCount === 0) {
+    if (
+      companyUpdated.modifiedCount === 0 &&
+      workRequestUpdated.modifiedCount === 0 &&
+      applicationUpdated.modifiedCount === 0
+    ) {
       return res.status(404).json({ message: 'Notification not found' });
     }
 
