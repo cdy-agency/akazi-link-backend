@@ -571,8 +571,9 @@ export const getApplicantsForJob = async (req: Request, res: Response) => {
 export const updateApplicationStatus = async (req: Request, res: Response) => {
   try {
     const { applicationId } = req.params as { applicationId: string };
-    const { status } = req.body as {
+    const { status, message } = req.body as {
       status: "pending" | "hired" | "rejected";
+      message?: string;
     };
     const companyId = req.user?.id;
 
@@ -592,6 +593,11 @@ export const updateApplicationStatus = async (req: Request, res: Response) => {
     ) {
       return res.status(400).json({ message: "Invalid status value" });
     }
+    // Require a custom message from the company to be delivered with the status update
+    const customMessage = typeof message === 'string' && message.trim().length > 0 ? message.trim() : undefined;
+    if (!customMessage) {
+      return res.status(400).json({ message: "A custom message is required" });
+    }
 
     const application = await Application.findById(applicationId);
     if (!application)
@@ -607,12 +613,38 @@ export const updateApplicationStatus = async (req: Request, res: Response) => {
     }
 
     application.status = status;
+    // Push a single system notification containing the exact custom message
     application.notifications.push({
-      message: `Your application status has been updated to "${status}"`,
+      message: customMessage,
       read: false,
       createdAt: new Date(),
     } as any);
     await application.save();
+
+    // Send an email notification to the employee using existing utils
+    try {
+      const [employee, companyDoc] = await Promise.all([
+        Employee.findById(application.employeeId).select('name email'),
+        Company.findById(companyId).select('companyName logo')
+      ]);
+
+      if (employee?.email) {
+        const subjectStatus = status.charAt(0).toUpperCase() + status.slice(1);
+        await sendEmail({
+          type: 'contactReply',
+          to: employee.email,
+          data: {
+            contactName: employee.name,
+            subject: `Application status updated: ${subjectStatus}`,
+            content: customMessage,
+            logo: (companyDoc as any)?.logo?.url || process.env.APP_LOGO || '',
+            companyName: companyDoc?.companyName || 'Recruitment Team',
+          } as any,
+        });
+      }
+    } catch (emailErr) {
+      console.error('Failed to send application status email', emailErr);
+    }
 
     res
       .status(200)
