@@ -252,13 +252,6 @@ try {
   const workRequestNotifications = workRequests.flatMap((wr: any) => wr.notifications as any[]);
   const allNotifications = [...applicationNotifications, ...workRequestNotifications];
 
-  // Optionally, mark notifications as read after fetching them
-  // await Application.updateMany(
-  //   { employeeId, 'notifications.read': false },
-  //   { $set: { 'notifications.$[elem].read': true } },
-  //   { arrayFilters: [{ 'elem.read': false }] }
-  // );
-
   res.status(200).json({ message: 'Notifications retrieved successfully', notifications: allNotifications });
 } catch (error) {
   console.error('Error getting notifications:', error);
@@ -266,9 +259,7 @@ try {
 }
 };
 
-/**
- * Employee views and responds to work requests
- */
+
 export const listWorkRequests = async (req: Request, res: Response) => {
   try {
     const employeeId = req.user?.id;
