@@ -3,42 +3,6 @@ import Job from '../models/Job';
 import User from '../models/User';
 
 
-/**
- * @swagger
- * tags:
- *   name: Public
- *   description: Publicly accessible endpoints
- */
-
-/**
- * @swagger
- * /api/jobs:
- *   get:
- *     summary: List all jobs (public)
- *     tags: [Public]
- *     parameters:
- *       - in: query
- *         name: category
- *         schema:
- *           type: string
- *         description: Optional category to filter jobs
- *     responses:
- *       200:
- *         description: Jobs retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                 jobs:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Job'
- *       500:
- *         description: Server error
- */
 export const listPublicJobs = async (req: Request, res: Response) => {
   try {
     const { category } = req.query;

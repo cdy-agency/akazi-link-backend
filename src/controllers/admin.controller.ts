@@ -74,8 +74,29 @@ try {
 
 export const getEmployees = async (req: Request, res: Response) => {
 try {
-  const employees = await Employee.find().select('-password'); // Exclude passwords
-  res.status(200).json({ message: 'Employees retrieved successfully', employees });
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const skip = (page - 1) * limit;
+
+  const [employees, total] = await Promise.all([
+    Employee.find().select('-password').sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Employee.countDocuments()
+  ]);
+
+  const totalPages = Math.ceil(total / limit);
+
+  res.status(200).json({ 
+    message: 'Employees retrieved successfully', 
+    employees,
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalItems: total,
+      itemsPerPage: limit,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1
+    }
+  });
 } catch (error) {
   console.error('Error getting employees:', error);
   res.status(500).json({ message: 'Server error' });
@@ -84,8 +105,29 @@ try {
 
 export const getCompanies = async (req: Request, res: Response) => {
 try {
-  const companies = await Company.find().select('-password'); // Exclude passwords
-  res.status(200).json({ message: 'Companies retrieved successfully', companies });
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const skip = (page - 1) * limit;
+
+  const [companies, total] = await Promise.all([
+    Company.find().select('-password').sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Company.countDocuments()
+  ]);
+
+  const totalPages = Math.ceil(total / limit);
+
+  res.status(200).json({ 
+    message: 'Companies retrieved successfully', 
+    companies,
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalItems: total,
+      itemsPerPage: limit,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1
+    }
+  });
 } catch (error) {
   res.status(500).json({ message: 'Server error' });
 }
@@ -534,8 +576,29 @@ export const rejectCompanyProfile = async (req: Request, res: Response) => {
 
 export const getAdminNotifications = async (req: Request, res: Response) => {
   try {
-    const notifications = await AdminNotification.find().sort({ createdAt: -1 });
-    res.status(200).json({ message: 'Admin notifications retrieved successfully', notifications });
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
+    const [notifications, total] = await Promise.all([
+      AdminNotification.find().sort({ createdAt: -1 }).skip(skip).limit(limit),
+      AdminNotification.countDocuments()
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    res.status(200).json({ 
+      message: 'Admin notifications retrieved successfully', 
+      notifications,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems: total,
+        itemsPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      }
+    });
   } catch (error) {
     console.error('Error getting admin notifications:', error);
     res.status(500).json({ message: 'Server error' });

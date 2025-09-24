@@ -552,13 +552,33 @@ export const getApplicantsForJob = async (req: Request, res: Response) => {
         .json({ message: "Access Denied: You do not own this job" });
     }
 
-    const applicants = await Application.find({ jobId }).populate(
-      "employeeId",
-      "name email phoneNumber location about profileImage documents"
-    ); // Populate richer employee details for modal
-    res
-      .status(200)
-      .json({ message: "Applicants retrieved successfully", applicants });
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
+    const [applicants, total] = await Promise.all([
+      Application.find({ jobId })
+        .populate("employeeId", "name email phoneNumber location about profileImage documents")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Application.countDocuments({ jobId })
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    res.status(200).json({ 
+      message: "Applicants retrieved successfully", 
+      applicants,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems: total,
+        itemsPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      }
+    });
   } catch (error) {
     console.error("Error getting applicants for job:", error);
     res.status(500).json({ message: "Server error" });
@@ -571,8 +591,9 @@ export const getApplicantsForJob = async (req: Request, res: Response) => {
 export const updateApplicationStatus = async (req: Request, res: Response) => {
   try {
     const { applicationId } = req.params as { applicationId: string };
-    const { status } = req.body as {
+    const { status, message } = req.body as {
       status: "pending" | "hired" | "rejected";
+      message?: string;
     };
     const companyId = req.user?.id;
 
@@ -592,6 +613,11 @@ export const updateApplicationStatus = async (req: Request, res: Response) => {
     ) {
       return res.status(400).json({ message: "Invalid status value" });
     }
+    // Require a custom message from the company to be delivered with the status update
+    const customMessage = typeof message === 'string' && message.trim().length > 0 ? message.trim() : undefined;
+    if (!customMessage) {
+      return res.status(400).json({ message: "A custom message is required" });
+    }
 
     const application = await Application.findById(applicationId);
     if (!application)
@@ -607,12 +633,38 @@ export const updateApplicationStatus = async (req: Request, res: Response) => {
     }
 
     application.status = status;
+    // Push a single system notification containing the exact custom message
     application.notifications.push({
-      message: `Your application status has been updated to "${status}"`,
+      message: customMessage,
       read: false,
       createdAt: new Date(),
     } as any);
     await application.save();
+
+    // Send an email notification to the employee using existing utils
+    try {
+      const [employee, companyDoc] = await Promise.all([
+        Employee.findById(application.employeeId).select('name email'),
+        Company.findById(companyId).select('companyName logo')
+      ]);
+
+      if (employee?.email) {
+        const subjectStatus = status.charAt(0).toUpperCase() + status.slice(1);
+        await sendEmail({
+          type: 'contactReply',
+          to: employee.email,
+          data: {
+            contactName: employee.name,
+            subject: `Application status updated: ${subjectStatus}`,
+            content: customMessage,
+            logo: (companyDoc as any)?.logo?.url || process.env.APP_LOGO || '',
+            companyName: companyDoc?.companyName || 'Recruitment Team',
+          } as any,
+        });
+      }
+    } catch (emailErr) {
+      console.error('Failed to send application status email', emailErr);
+    }
 
     res
       .status(200)
@@ -630,6 +682,11 @@ export const browseEmployees = async (req: Request, res: Response) => {
   try {
     const companyId = req.user?.id;
     if (!companyId) return res.status(403).json({ message: "Access Denied" });
+    
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+    
     // Lazy import to avoid circular
     const { default: Employee } = await import("../models/Employee");
     const { category } = req.query as { category?: string };
@@ -637,10 +694,26 @@ export const browseEmployees = async (req: Request, res: Response) => {
     if (category && typeof category === 'string') {
       query.jobPreferences = { $in: [category] };
     }
-    const employees = await Employee.find(query).select(
-      "-password -role"
-    );
-    res.status(200).json({ message: "Employees retrieved", employees });
+    
+    const [employees, total] = await Promise.all([
+      Employee.find(query).select("-password -role").sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Employee.countDocuments(query)
+    ]);
+    
+    const totalPages = Math.ceil(total / limit);
+    
+    res.status(200).json({ 
+      message: "Employees retrieved", 
+      employees,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems: total,
+        itemsPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      }
+    });
   } catch (error) {
     console.error("Error browsing employees:", error);
     res.status(500).json({ message: "Server error" });
@@ -1069,6 +1142,10 @@ export const getCompanyNotifications = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Access Denied: Company ID not found in token' });
     }
 
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
     // Get notifications from company document, work requests, and applications
     const [companyDoc, workRequests, jobDocs] = await Promise.all([
       Company.findById(companyId).select('notifications'),
@@ -1088,9 +1165,25 @@ export const getCompanyNotifications = async (req: Request, res: Response) => {
       ...applicationNotifications,
     ];
 
+    // Sort by creation date (newest first)
+    allNotifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    // Apply pagination
+    const total = allNotifications.length;
+    const totalPages = Math.ceil(total / limit);
+    const paginatedNotifications = allNotifications.slice(skip, skip + limit);
+
     res.status(200).json({ 
       message: 'Company notifications retrieved successfully', 
-      notifications: allNotifications 
+      notifications: paginatedNotifications,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems: total,
+        itemsPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      }
     });
   } catch (error) {
     console.error('Error getting company notifications:', error);
