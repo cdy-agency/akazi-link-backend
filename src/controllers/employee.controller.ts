@@ -242,6 +242,10 @@ try {
     return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
   }
 
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const skip = (page - 1) * limit;
+
   // Find applications and work requests for the employee and return their notifications
   const [applications, workRequests] = await Promise.all([
     Application.find({ employeeId }).select('notifications'),
@@ -252,7 +256,26 @@ try {
   const workRequestNotifications = workRequests.flatMap((wr: any) => wr.notifications as any[]);
   const allNotifications = [...applicationNotifications, ...workRequestNotifications];
 
-  res.status(200).json({ message: 'Notifications retrieved successfully', notifications: allNotifications });
+  // Sort by creation date (newest first)
+  allNotifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  // Apply pagination
+  const total = allNotifications.length;
+  const totalPages = Math.ceil(total / limit);
+  const paginatedNotifications = allNotifications.slice(skip, skip + limit);
+
+  res.status(200).json({ 
+    message: 'Notifications retrieved successfully', 
+    notifications: paginatedNotifications,
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalItems: total,
+      itemsPerPage: limit,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1
+    }
+  });
 } catch (error) {
   console.error('Error getting notifications:', error);
   res.status(500).json({ message: 'Server error' });
