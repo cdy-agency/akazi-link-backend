@@ -485,7 +485,49 @@ export class EmailTemplates {
     return this.wrap(`Job Offer: ${jobTitle} at ${offeringCompanyName}`, companyName, accentColor, logoUrl, body);
   }
 
+  // 6. Offer Response Notification to Company
+  static offerResponseNotify({
+    companyDisplayName,
+    employeeName,
+    jobTitle,
+    action,
+    message,
+    viewRequestLink,
+    logoUrl,
+    brandName = 'Recruitment Team',
+    accentColor = '#3b82f6',
+  }: {
+    companyDisplayName: string;
+    employeeName: string;
+    jobTitle: string;
+    action: 'accepted' | 'rejected';
+    message?: string;
+    viewRequestLink?: string;
+    logoUrl: string;
+    brandName?: string;
+    accentColor?: string;
+  }): string {
+    const isAccepted = action === 'accepted';
+    const statusColor = isAccepted ? '#10b981' : '#ef4444';
+    const statusText = isAccepted ? 'accepted' : 'rejected';
 
+    const body = `
+      <h2 style="margin-bottom:16px;font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:24px;font-weight:600;color:#1f2937;">Offer ${isAccepted ? 'Accepted' : 'Rejected'}</h2>
+      <p style="color:#6b7280;font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;">
+        ${employeeName} has <strong style="color:${statusColor}">${statusText}</strong> your offer for <strong>${jobTitle}</strong>.
+      </p>
+      ${message ? `<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:16px 0;">${message}</div>` : ''}
+      ${viewRequestLink ? `
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${viewRequestLink}" style="background:${accentColor};color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600;font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;display:inline-block;">View Request</a>
+      </div>
+      ` : ''}
+    `;
+
+    return this.wrap(`Offer ${isAccepted ? 'Accepted' : 'Rejected'} - ${employeeName}`, brandName, accentColor, logoUrl, body);
+  }
+
+  
   static companyProfileCompletedNotify({
   companyName: completedCompanyName,
   dashboardLink,

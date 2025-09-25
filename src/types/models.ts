@@ -50,6 +50,9 @@ export interface ICompany extends IUser {
 
 export interface IEmployee extends IUser {
   name: string;
+  province?: string;
+  district?: string;
+  gender?: string;
   dateOfBirth?: Date;
   image?: string
   phoneNumber?: string;

@@ -9,7 +9,7 @@ import AdminNotification from '../models/AdminNotification';
 
 export const registerEmployee = async (req: Request, res: Response) => {
 try {
-  const { name, email, password, dateOfBirth, phoneNumber, jobPreferences } = req.body;
+  const { name, email, password, dateOfBirth, phoneNumber, jobPreferences,province, district,gender } = req.body;
 
   if (!name || !email || !password) {
     return res.status(400).json({ message: 'Please provide name, email, and password' });
@@ -28,6 +28,9 @@ try {
     password: hashedPassword,
     role: 'employee',
     dateOfBirth,
+    province, 
+    district,
+    gender,
     phoneNumber,
     jobPreferences: Array.isArray(jobPreferences) ? jobPreferences : [],
   });

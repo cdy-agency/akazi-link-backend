@@ -28,6 +28,7 @@ import {
 } from '../controllers/company.controller';
 import { authenticateToken, authorizeRoles, authorizeCompany } from '../middlewares/authMiddleware';
 import uploadSingle, { uploadMultiple } from "rod-fileupload"
+import { optionalUploadSingle } from '../middlewares/optionalUpload'
 import cloudinary from '../config/cloudinary';
 
 const router = Router();
@@ -45,8 +46,10 @@ router.patch('/complete-profile', authorizeCompany({ requireApproval: false, all
 
 // Posting jobs still requires approval
 router.post('/job', authorizeCompany({ requireApproval: true }), uploadSingle('image', cloudinary), postJob);
-// Update existing job
-router.patch('/job/:id', authorizeCompany({ requireApproval: true }), uploadSingle('image', cloudinary), updateJob);
+// Update existing job (image optional)
+router.patch('/job/:id', authorizeCompany({ requireApproval: true }), optionalUploadSingle('image'), updateJob);
+// Update existing job without file upload middleware (pure JSON/body)
+router.patch('/job/:id/basic', authorizeCompany({ requireApproval: true }), updateJob);
 // Toggle job active status
 router.patch('/job/:id/status', authorizeCompany({ requireApproval: true }), toggleJobStatus);
 // Delete existing job

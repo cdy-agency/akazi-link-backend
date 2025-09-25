@@ -154,3 +154,19 @@ export interface CompanyProfileCompletedOptions {
   bcc?: string;
   attachments?: any[];
 }
+
+// Offer response notification to company (employee accepted/rejected)
+export type OfferResponseOptions = BaseEmailOptions & {
+  type: 'offerResponse';
+  data: {
+    companyDisplayName: string;
+    employeeName: string;
+    jobTitle: string;
+    action: 'accepted' | 'rejected';
+    message?: string;
+    viewRequestLink?: string;
+    logo?: string;
+    platformName?: string;
+    accentColor?: string;
+  };
+};

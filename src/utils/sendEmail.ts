@@ -12,7 +12,8 @@ import {
   JobOfferOptions,
   ResetPasswordOptions,
   WelcomeOptions,
-  CompanyProfileCompletedOptions
+  CompanyProfileCompletedOptions,
+  OfferResponseOptions
 
 } from '../types/email';
 
@@ -27,6 +28,7 @@ type SendEmailOptions =
   | ResetPasswordOptions
   | WelcomeOptions
   | CompanyProfileCompletedOptions
+  | OfferResponseOptions
 
 export async function sendEmail(options: SendEmailOptions) {
   let html: string;
@@ -96,6 +98,18 @@ export async function sendEmail(options: SendEmailOptions) {
       });
       subject = `Job Offer: ${(data as any).jobTitle} at ${(data as any).companyName}`;
       break;
+
+    case 'offerResponse': {
+      html = EmailTemplates.offerResponseNotify({
+        ...data,
+        logoUrl: defaultLogo,
+        companyName: defaultCompanyName,
+        accentColor: defaultAccentColor,
+      } as any);
+      const actionText = (data as any).action === 'accepted' ? 'Accepted' : 'Rejected';
+      subject = `Offer ${actionText}: ${(data as any).jobTitle} - ${(data as any).employeeName}`;
+      break;
+    }
 
     case 'adminNotify':
       html = EmailTemplates.adminNotify({

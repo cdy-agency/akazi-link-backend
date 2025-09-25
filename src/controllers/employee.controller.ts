@@ -308,6 +308,32 @@ export const respondWorkRequest = async (req: Request, res: Response) => {
     wr.status = action === 'accept' ? 'accepted' : 'rejected';
     wr.notifications.push({ message: `Employee has ${wr.status} your request`, read: false, createdAt: new Date() } as any);
     await wr.save();
+
+    // Notify company via email
+    try {
+      const [company, employee] = await Promise.all([
+        (await (await import('../models/Company')).default.findById(wr.companyId).select('companyName email logo')),
+        (await (await import('../models/Employee')).default.findById(wr.employeeId).select('name email')),
+      ]);
+
+      if (company?.email && employee?.name) {
+        await sendEmail({
+          type: 'offerResponse',
+          to: (company as any).email,
+          data: {
+            companyDisplayName: (company as any).companyName || 'Your Company',
+            employeeName: (employee as any).name,
+            jobTitle: 'Work Request',
+            action: wr.status === 'accepted' ? 'accepted' : 'rejected',
+            viewRequestLink: `${process.env.FRONTEND_URL_DASHBOARD || process.env.APP_URL}/company/work-requests/${wr._id}`,
+            logo: (company as any)?.logo?.url || process.env.APP_LOGO || '',
+          },
+        } as any);
+      }
+    } catch (emailError) {
+      console.error('Failed to send offer response email to company', emailError);
+    }
+
     res.status(200).json({ message: 'Response saved', request: wr });
   } catch (error) {
     console.error('Error responding to work request:', error);
