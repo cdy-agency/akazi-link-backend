@@ -6,7 +6,7 @@ const UserSchema: Schema = new Schema(
   email: { type: String, required: true, unique: true },
   image: { type: String },
   password: { type: String, required: true },
-  role: { type: String, enum: ['employee', 'company', 'superadmin'], required: true },
+  role: { type: String, enum: ['employee', 'company', 'superadmin', 'employer', 'housekeeper'], required: true },
   isActive: { type: Boolean, default: true },
 },
 { timestamps: true }

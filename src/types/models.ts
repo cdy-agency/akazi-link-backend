@@ -21,7 +21,7 @@ export interface IUser extends Document {
   email: string;
   image?: string;
   password?: string;
-  role: "employee" | "company" | "superadmin";
+  role: "employee" | "company" | "superadmin" | "employer" | "housekeeper";
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -113,6 +113,60 @@ export interface IWorkRequest extends Document {
   message?: string;
   status: "pending" | "accepted" | "rejected";
   notifications: INotification[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ILocation {
+  province: string;
+  district: string;
+  sector: string;
+  cell: string;
+  village: string;
+}
+
+export interface IEmployer extends IUser {
+  name: string;
+  email?: string;
+  nationalId: string;
+  location: ILocation;
+  villageLeaderNumber: string;
+  partnerNumber: string;
+  churchName: string;
+  salaryRangeMin: number;
+  salaryRangeMax: number;
+  profileImage?: IFileInfo;
+  status: "pending" | "active" | "completed";
+  selectedHousekeepers: Types.ObjectId[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IHousekeeper extends IUser {
+  fullName: string;
+  dateOfBirth: Date;
+  gender: "male" | "female";
+  idNumber: string;
+  phoneNumber: string;
+  location: ILocation;
+  workPreferences: {
+    workDistrict: string;
+    workSector: string;
+    willingToWorkWithChildren: boolean;
+  };
+  background: {
+    hasParents: boolean;
+    fatherName?: string;
+    fatherPhone?: string;
+    motherName?: string;
+    motherPhone?: string;
+    hasStudied: boolean;
+    educationLevel?: string;
+    church?: string;
+  };
+  passportImage?: IFileInfo;
+  fullBodyImage?: IFileInfo;
+  status: "available" | "hired" | "inactive";
   createdAt: Date;
   updatedAt: Date;
 }
