@@ -1,3 +1,4 @@
+/// <reference path="./types/express.d.ts" />
 import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
@@ -11,6 +12,7 @@ import employeeRoutes from './routes/employee.routes';
 import companyRoutes from './routes/company.routes';
 import adminRoutes from './routes/admin.routes';
 import publicRoutes from './routes/public.routes';
+import uploadRoutes from './routes/upload.routes';
 import { errorHandler } from './middlewares/errorHandler';
 import { seedSuperAdmin } from './utils/seed';
 import { migrateCompanyStatus } from './utils/seed';
@@ -93,7 +95,7 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 console.log('Swagger spec paths:', Object.keys((swaggerSpec as any).paths || {}));
 
 // Serve the JSON specification separately
-app.get('/api-docs/swagger.json', (req, res) => {
+app.get('/api-docs/swagger.json', (req: express.Request, res: express.Response) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
 });
@@ -102,6 +104,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Routes
 app.use('/api', publicRoutes);
+app.use('/api', uploadRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/employee', employeeRoutes);
 app.use('/api/company', companyRoutes);
