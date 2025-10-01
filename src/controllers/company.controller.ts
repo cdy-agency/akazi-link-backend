@@ -15,18 +15,6 @@ import AdminNotification from "../models/AdminNotification";
 import Employee from "../models/Employee";
 import Application from "../models/Application";
 
-const experienceOptions = [
-  { value: "1", label: "1 year" },
-  { value: "2", label: "2 years" },
-  { value: "3+", label: "3+ years" },
-]
-
-const salaryRanges = [
-  { value: "0-50", label: "0-50k" },
-  { value: "51-100", label: "51-100k" },
-  { value: "101-150+", label: "101-150k+" },
-]
-
 
 export const getProfile = async (req: Request, res: Response) => {
   try {
@@ -233,10 +221,11 @@ export const postJob = async (req: Request, res: Response) => {
       district, 
       salary,
       employmentType,
+      responsibilities,
       applicationDeadline,
       category,
       benefits,
-      responsibilities,
+      otherBenefits,
     } = req.body;
 
     if (!title || !description || !employmentType || !category) {
@@ -265,22 +254,26 @@ export const postJob = async (req: Request, res: Response) => {
       salary,
       category,
       benefits: Array.isArray(benefits) ? benefits : [],
+      otherBenefits: Array.isArray(otherBenefits) ? otherBenefits : [],
       responsibilities: Array.isArray(responsibilities) ? responsibilities : [],
       applicationDeadline,
       ...(applicationDeadlineAt ? { applicationDeadlineAt } : {}),
       companyId,
     });
-    res.status(201).json({ message: "Job posted successfully", job });
+
+    // Find matched employees by jobPreferences
+    const matchedEmployees = await (await import("../models/Employee")).default.find({
+      jobPreferences: { $in: [category] }
+    }).select("-password -role");
+
+    res.status(201).json({ message: "Job posted successfully", job, matchedEmployees });
   } catch (error) {
     console.error("Error posting job:", error);
     res.status(500).json({ message: "Server error", error });
   }
 };
 
-/**
- * Update an existing job. Only fields provided will be updated.
- * Supports image replacement via rod-fileupload and coerces array fields.
- */
+// Supports image replacement via rod-fileupload and coerces array fields.
 export const updateJob = async (req: Request, res: Response) => {
   try {
     const companyId = req.user?.id;
@@ -338,6 +331,8 @@ export const updateJob = async (req: Request, res: Response) => {
     if (typeof responsibilities !== 'undefined') set.responsibilities = responsibilities;
     const benefits = maybeArray(bodyAny.benefits);
     if (typeof benefits !== 'undefined') set.benefits = benefits;
+    const otherBenefits = maybeArray(bodyAny.otherBenefits);
+    if (typeof otherBenefits !== 'undefined') set.otherBenefits = otherBenefits;
 
     // Image (if provided by rod-fileupload, it'll be an object with url)
     // Allow explicit image removal when bodyAny.image === null or 'delete'
@@ -649,18 +644,34 @@ export const updateApplicationStatus = async (req: Request, res: Response) => {
       ]);
 
       if (employee?.email) {
-        const subjectStatus = status.charAt(0).toUpperCase() + status.slice(1);
-        await sendEmail({
-          type: 'contactReply',
-          to: employee.email,
-          data: {
-            contactName: employee.name,
-            subject: `Application status updated: ${subjectStatus}`,
-            content: customMessage,
-            logo: (companyDoc as any)?.logo?.url || process.env.APP_LOGO || '',
-            companyName: companyDoc?.companyName || 'Recruitment Team',
-          } as any,
-        });
+        if (status === 'hired') {
+          // Send special hired notification email
+          await sendEmail({
+            type: 'hiredNotification',
+            to: employee.email,
+            data: {
+              employeeName: employee.name,
+              companyName: companyDoc?.companyName || 'Our Company',
+              jobTitle: job.title,
+              customMessage: customMessage,
+              logo: (companyDoc as any)?.logo?.url || process.env.APP_LOGO || '',
+            } as any,
+          });
+        } else {
+          // Send generic status update email for other statuses
+          const subjectStatus = status.charAt(0).toUpperCase() + status.slice(1);
+          await sendEmail({
+            type: 'contactReply',
+            to: employee.email,
+            data: {
+              contactName: employee.name,
+              subject: `Application status updated: ${subjectStatus}`,
+              content: customMessage,
+              logo: (companyDoc as any)?.logo?.url || process.env.APP_LOGO || '',
+              companyName: companyDoc?.companyName || 'Recruitment Team',
+            } as any,
+          });
+        }
       }
     } catch (emailErr) {
       console.error('Failed to send application status email', emailErr);
@@ -1085,6 +1096,37 @@ export const toggleJobStatus = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error toggling job status:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Get employees whose jobPreferences match a job's category
+ * GET /company/job/:jobId/matched-employees
+ */
+export const getMatchedEmployeesForJob = async (req: Request, res: Response) => {
+  try {
+    const companyId = req.user?.id;
+    const { jobId } = req.params;
+    if (!companyId) {
+      return res.status(403).json({ message: "Access Denied: Company ID not found in token" });
+    }
+    if (!Types.ObjectId.isValid(jobId)) {
+      return res.status(400).json({ message: "Invalid Job ID" });
+    }
+    const job = await Job.findById(jobId);
+    if (!job) {
+      return res.status(404).json({ message: "Job not found" });
+    }
+    if (job.companyId.toString() !== companyId) {
+      return res.status(403).json({ message: "Access Denied: You do not own this job" });
+    }
+    const matchedEmployees = await (await import("../models/Employee")).default.find({
+      jobPreferences: { $in: [job.category] }
+    }).select("-password -role");
+    res.status(200).json({ matchedEmployees });
+  } catch (error) {
+    console.error("Error getting matched employees for job:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 

@@ -25,6 +25,7 @@ import {
   activateCompanyAccount,
   deleteCompanyAccount,
   getCompanyJobById,
+  getMatchedEmployeesForJob,
 } from '../controllers/company.controller';
 import { authenticateToken, authorizeRoles, authorizeCompany } from '../middlewares/authMiddleware';
 import uploadSingle, { uploadMultiple } from "rod-fileupload"
@@ -59,6 +60,8 @@ router.delete('/job/:id', authorizeCompany({ requireApproval: true }), deleteJob
 router.get('/jobs', authorizeCompany({ requireApproval: true }), getCompanyJobs);
 // Get a single job owned by the company
 router.get('/job/:id', authorizeCompany({ requireApproval: true }), getCompanyJobById);
+// Get matched employees for a job
+router.get('/job/:jobId/matched-employees', authorizeCompany({ requireApproval: true }), getMatchedEmployeesForJob);
 
 
 router.get('/applicants/:jobId', authorizeCompany({ requireApproval: true }), getApplicantsForJob);

@@ -13,7 +13,8 @@ import {
   ResetPasswordOptions,
   WelcomeOptions,
   CompanyProfileCompletedOptions,
-  OfferResponseOptions
+  OfferResponseOptions,
+  HiredNotificationOptions
 
 } from '../types/email';
 
@@ -29,6 +30,7 @@ type SendEmailOptions =
   | WelcomeOptions
   | CompanyProfileCompletedOptions
   | OfferResponseOptions
+  | HiredNotificationOptions
 
 export async function sendEmail(options: SendEmailOptions) {
   let html: string;
@@ -108,6 +110,17 @@ export async function sendEmail(options: SendEmailOptions) {
       } as any);
       const actionText = (data as any).action === 'accepted' ? 'Accepted' : 'Rejected';
       subject = `Offer ${actionText}: ${(data as any).jobTitle} - ${(data as any).employeeName}`;
+      break;
+    }
+
+    case 'hiredNotification': {
+      html = EmailTemplates.hiredNotification({
+        ...data,
+        logoUrl: defaultLogo,
+        companyName: defaultCompanyName,
+        accentColor: defaultAccentColor,
+      } as any);
+      subject = `Congratulations! You've Been Hired - ${(data as any).jobTitle}`;
       break;
     }
 

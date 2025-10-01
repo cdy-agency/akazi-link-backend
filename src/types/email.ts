@@ -170,3 +170,17 @@ export type OfferResponseOptions = BaseEmailOptions & {
     accentColor?: string;
   };
 };
+
+// Hired notification to employee
+export type HiredNotificationOptions = BaseEmailOptions & {
+  type: 'hiredNotification';
+  data: {
+    employeeName: string;
+    companyName: string;
+    jobTitle: string;
+    customMessage?: string;
+    logo?: string;
+    platformName?: string;
+    accentColor?: string;
+  };
+};

@@ -527,6 +527,48 @@ export class EmailTemplates {
     return this.wrap(`Offer ${isAccepted ? 'Accepted' : 'Rejected'} - ${employeeName}`, brandName, accentColor, logoUrl, body);
   }
 
+  // 7. Hired Notification to Employee
+  static hiredNotification({
+    employeeName,
+    companyName: hiringCompanyName,
+    jobTitle,
+    customMessage,
+    logoUrl,
+    brandName = 'Recruitment Team',
+    accentColor = '#3b82f6',
+  }: {
+    employeeName: string;
+    companyName: string;
+    jobTitle: string;
+    customMessage?: string;
+    logoUrl: string;
+    brandName?: string;
+    accentColor?: string;
+  }): string {
+    const body = `
+      <h2 style="margin-bottom:16px;font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:24px;font-weight:600;color:#1f2937;">🎉 Congratulations! You've Been Hired!</h2>
+      <p style="margin-bottom:24px;font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;color:#3c4043;font-size:16px;">Dear ${employeeName},</p>
+      
+      <div style="background:#f0f9ff;border:1px solid #0ea5e9;border-radius:8px;padding:24px;margin:24px 0;">
+        <h3 style="margin:0 0 16px 0;font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:18px;font-weight:600;color:#1f2937;">Job Details</h3>
+        <p style="font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:16px;margin:8px 0;color:#374151;"><strong>Company:</strong> ${hiringCompanyName}</p>
+        <p style="font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:16px;margin:8px 0;color:#374151;"><strong>Position:</strong> ${jobTitle}</p>
+      </div>
+      
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:24px;margin:24px 0;">
+        <p style="font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:#374151;margin:0;">
+          ${customMessage || `Congratulations! You have been hired for <strong>${jobTitle}</strong> at <strong>${hiringCompanyName}</strong>. Our team will reach out with next steps.`}
+        </p>
+      </div>
+      
+      <p style="color:#6b7280;font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;">
+        We're excited to have you join our team! If you have any questions, please don't hesitate to contact us.
+      </p>
+    `;
+
+    return this.wrap(`Congratulations! You've Been Hired - ${jobTitle}`, brandName, accentColor, logoUrl, body);
+  }
+
   
   static companyProfileCompletedNotify({
   companyName: completedCompanyName,

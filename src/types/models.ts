@@ -74,8 +74,9 @@ export interface IJob extends Document {
   image: IFileInfo;
   experience: string;
   employmentType: "fulltime" | "part-time" | "internship";
-    category: string;
+  category: string;
   salary: string,
+  otherBenefits?: string[],
   responsibilities?: string[],
   benefits?: string[];
   companyId: Types.ObjectId;
