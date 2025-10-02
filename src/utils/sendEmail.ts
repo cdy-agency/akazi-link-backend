@@ -14,7 +14,9 @@ import {
   WelcomeOptions,
   CompanyProfileCompletedOptions,
   OfferResponseOptions,
-  HiredNotificationOptions
+  HiredNotificationOptions,
+  EmployerRegistrationOptions,
+  HousekeeperRegistrationOptions
 
 } from '../types/email';
 
@@ -31,6 +33,8 @@ type SendEmailOptions =
   | CompanyProfileCompletedOptions
   | OfferResponseOptions
   | HiredNotificationOptions
+  | EmployerRegistrationOptions   
+  | HousekeeperRegistrationOptions;
 
 export async function sendEmail(options: SendEmailOptions) {
   let html: string;

@@ -116,3 +116,61 @@ export interface IWorkRequest extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// Location interface for consistent location structure
+export interface ILocation {
+  province: string;
+  district: string;
+  sector: string;
+  cell: string;
+  village: string;
+}
+
+// Employer interface for household employers
+export interface IEmployer extends Document {
+  name: string;
+  email?: string;
+  phoneNumber: string;
+  nationalId: string;
+  location: ILocation;
+  villageLeaderNumber: string;
+  partnerNumber: string;
+  churchName: string;
+  salaryRangeMin: number;
+  salaryRangeMax: number;
+  profileImage?: IFileInfo;
+  status: "pending" | "active" | "completed";
+  selectedHousekeepers: Types.ObjectId[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Housekeeper interface
+export interface IHousekeeper extends Document {
+  fullName: string;
+  dateOfBirth: Date;
+  gender: "male" | "female";
+  idNumber: string;
+  phoneNumber: string;
+  location: ILocation;
+  workPreferences: {
+    workDistrict: string;
+    workSector: string;
+    willingToWorkWithChildren: boolean;
+  };
+  background: {
+    hasParents: boolean;
+    fatherName?: string;
+    fatherPhone?: string;
+    motherName?: string;
+    motherPhone?: string;
+    hasStudied: boolean;
+    educationLevel?: string;
+    church?: string;
+  };
+  passportImage?: IFileInfo;
+  fullBodyImage?: IFileInfo;
+  status: "available" | "hired" | "inactive";
+  createdAt: Date;
+  updatedAt: Date;
+}

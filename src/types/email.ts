@@ -184,3 +184,35 @@ export type HiredNotificationOptions = BaseEmailOptions & {
     accentColor?: string;
   };
 };
+
+// Employer Registration Notification Options
+export type EmployerRegistrationOptions = BaseEmailOptions & {
+  type: 'employerRegistration';
+  data: {
+    employerName: string;
+    email?: string;
+    nationalId: string;
+    location: string;
+    salaryRange: string;
+    logo?: string;
+    platformName?: string;
+    accentColor?: string;
+  };
+};
+
+// Housekeeper Registration Notification Options
+export type HousekeeperRegistrationOptions = BaseEmailOptions & {
+  type: 'housekeeperRegistration';
+  data: {
+    housekeeperName: string;
+    idNumber: string;
+    phoneNumber: string;
+    location: string;
+    workDistrict: string;
+    workSector: string;
+    logo?: string;
+    platformName?: string;
+    accentColor?: string;
+  };
+};
+

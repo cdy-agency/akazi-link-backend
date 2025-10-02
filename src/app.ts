@@ -11,6 +11,9 @@ import employeeRoutes from './routes/employee.routes';
 import companyRoutes from './routes/company.routes';
 import adminRoutes from './routes/admin.routes';
 import publicRoutes from './routes/public.routes';
+import employerRoutes from './routes/employer.routes';
+import housekeeperRoutes from './routes/housekeeper.routes';
+import uploadRoutes from './routes/upload.routes';
 import { errorHandler } from './middlewares/errorHandler';
 import { seedSuperAdmin } from './utils/seed';
 import { migrateCompanyStatus } from './utils/seed';
@@ -106,6 +109,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/employee', employeeRoutes);
 app.use('/api/company', companyRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/employers', employerRoutes);
+app.use('/api/housekeepers', housekeeperRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

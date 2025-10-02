@@ -414,7 +414,6 @@ export class EmailTemplates {
     benefits,
     offerExpiryDate,
     acceptOfferLink,
-    companyLogoUrl,
     logoUrl,
     companyName = 'Platform Team',
     accentColor = '#3b82f6',
@@ -596,5 +595,101 @@ export class EmailTemplates {
     </div>
   `;
   return this.wrap(`Company Profile Completed - ${completedCompanyName}`, adminName, accentColor, logoUrl, body);
+}
+
+// Employer Registration Notification
+static employerRegistrationNotify({
+  employerName,
+  email,
+  nationalId,
+  location,
+  salaryRange,
+  phoneNumber,
+  logoUrl,
+  companyName = 'Platform Admin',
+  accentColor = '#3b82f6',
+}: {
+  employerName: string;
+  email: string;
+  nationalId: string;
+  location: string;
+  salaryRange?: string;
+  phoneNumber?: string;
+  logoUrl: string;
+  companyName?: string;
+  accentColor?: string;
+}): string {
+  const body = `
+    <h2 style="margin-bottom:16px;font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:24px;font-weight:600;color:#1f2937;">👔 New Employer Registration</h2>
+    <p style="color:#6b7280;font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;">A new employer has registered on the platform.</p>
+    
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:24px;margin:24px 0;">
+      <h3 style="margin:0 0 16px 0;font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:18px;font-weight:600;color:#1f2937;">Employer Details</h3>
+      <p style="font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:16px;margin:8px 0;color:#374151;"><strong>Name:</strong> ${employerName}</p>
+      <p style="font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:16px;margin:8px 0;color:#374151;"><strong>Email:</strong> ${email}</p>
+      <p style="font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:16px;margin:8px 0;color:#374151;"><strong>National ID:</strong> ${nationalId}</p>
+      <p style="font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:16px;margin:8px 0;color:#374151;"><strong>Location:</strong> ${location}</p>
+      ${salaryRange ? `<p style="font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:16px;margin:8px 0;color:#374151;"><strong>Salary Range:</strong> ${salaryRange}</p>` : ''}
+      ${phoneNumber ? `<p style="font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:16px;margin:8px 0;color:#374151;"><strong>Phone:</strong> ${phoneNumber}</p>` : ''}
+    </div>
+    
+    <div style="text-align:center;margin:32px 0;">
+      <a href="https://admin.yourapp.com/employers/pending" style="background:${accentColor};color:#fff;padding:14px 28px;text-decoration:none;border-radius:6px;font-weight:600;font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:16px;display:inline-block;">
+        Review Employer
+      </a>
+    </div>
+  `;
+  return this.wrap('New Employer Registration - ' + employerName, companyName, accentColor, logoUrl, body);
+}
+
+// Housekeeper Registration Notification
+static housekeeperRegistrationNotify({
+  housekeeperName,
+  idNumber,
+  phoneNumber,
+  location,
+  workDistrict,
+  workSector,
+  email,
+  experience,
+  logoUrl,
+  companyName = 'Platform Admin',
+  accentColor = '#3b82f6',
+}: {
+  housekeeperName: string;
+  idNumber: string;
+  phoneNumber: string;
+  location: string;
+  workDistrict?: string;
+  workSector?: string;
+  email?: string;
+  experience?: string;
+  logoUrl: string;
+  companyName?: string;
+  accentColor?: string;
+}): string {
+  const body = `
+    <h2 style="margin-bottom:16px;font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:24px;font-weight:600;color:#1f2937;">🏠 New Housekeeper Registration</h2>
+    <p style="color:#6b7280;font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;">A new housekeeper has registered on the platform.</p>
+    
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:24px;margin:24px 0;">
+      <h3 style="margin:0 0 16px 0;font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:18px;font-weight:600;color:#1f2937;">Housekeeper Details</h3>
+      <p style="font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:16px;margin:8px 0;color:#374151;"><strong>Name:</strong> ${housekeeperName}</p>
+      <p style="font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:16px;margin:8px 0;color:#374151;"><strong>ID Number:</strong> ${idNumber}</p>
+      <p style="font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:16px;margin:8px 0;color:#374151;"><strong>Phone:</strong> ${phoneNumber}</p>
+      ${email ? `<p style="font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:16px;margin:8px 0;color:#374151;"><strong>Email:</strong> ${email}</p>` : ''}
+      <p style="font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:16px;margin:8px 0;color:#374151;"><strong>Location:</strong> ${location}</p>
+      ${workDistrict ? `<p style="font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:16px;margin:8px 0;color:#374151;"><strong>Preferred Work District:</strong> ${workDistrict}</p>` : ''}
+      ${workSector ? `<p style="font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:16px;margin:8px 0;color:#374151;"><strong>Preferred Work Sector:</strong> ${workSector}</p>` : ''}
+      ${experience ? `<p style="font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:16px;margin:8px 0;color:#374151;"><strong>Experience:</strong> ${experience}</p>` : ''}
+    </div>
+    
+    <div style="text-align:center;margin:32px 0;">
+      <a href="https://admin.yourapp.com/housekeepers/pending" style="background:${accentColor};color:#fff;padding:14px 28px;text-decoration:none;border-radius:6px;font-weight:600;font-family: 'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;font-size:16px;display:inline-block;">
+        Review Housekeeper
+      </a>
+    </div>
+  `;
+  return this.wrap('New Housekeeper Registration - ' + housekeeperName, companyName, accentColor, logoUrl, body);
 }
 }
