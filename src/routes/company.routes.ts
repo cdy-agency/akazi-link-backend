@@ -15,6 +15,8 @@ import {
   deleteDocument,
   browseEmployees,
   sendWorkRequest,
+  getAllWorkRequests,
+  deleteWorkRequest,
   getCompanyNotifications,
   markCompanyNotificationRead,
   deleteCompanyNotification,
@@ -72,6 +74,8 @@ router.patch('/applications/:applicationId/status', authorizeCompany({ requireAp
 // Browse employees and send work requests
 router.get('/employees', authorizeCompany({ requireApproval: true }), browseEmployees);
 router.post('/work-requests', authorizeCompany({ requireApproval: true }), sendWorkRequest);
+router.get('/work-requests', authorizeCompany({requireApproval: true}), getAllWorkRequests)
+router.delete('/work-requests/:id', authorizeCompany({requireApproval: true}), deleteWorkRequest)
 
 // File upload endpoints
 router.post('/upload/logo', authorizeCompany({ requireApproval: false, allowDisabled: true }), uploadSingle('logo', cloudinary), uploadLogo);

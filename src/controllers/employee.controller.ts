@@ -325,7 +325,7 @@ export const respondWorkRequest = async (req: Request, res: Response) => {
             employeeName: (employee as any).name,
             jobTitle: 'Work Request',
             action: wr.status === 'accepted' ? 'accepted' : 'rejected',
-            viewRequestLink: `${process.env.FRONTEND_URL_DASHBOARD || process.env.APP_URL}/company/work-requests/${wr._id}`,
+            viewRequestLink: `${process.env.FRONTEND_URL_DASHBOARD || process.env.APP_URL}/company/work-requests`,
             logo: (company as any)?.logo?.url || process.env.APP_LOGO || '',
           },
         } as any);

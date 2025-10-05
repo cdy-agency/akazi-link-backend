@@ -804,7 +804,6 @@ export const sendWorkRequest = async (req: Request, res: Response) => {
       console.error("Failed to send job offer email", emailError);
     }
 
-    // System notification for employee stored on WorkRequest already done above
 
     res.status(201).json({ message: "Work request sent", work });
   } catch (error) {
@@ -812,6 +811,64 @@ export const sendWorkRequest = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+export const getAllWorkRequests = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const { role } = req.user as { role: "company" | "employee" };
+
+    if (!userId) return res.status(403).json({ message: "Access Denied" });
+
+    const filter =
+      role === "company"
+        ? { companyId: userId }
+        : { employeeId: userId };
+
+    const requests = await WorkRequest.find(filter)
+      .populate("companyId", "companyName email")
+      .populate(
+        "employeeId",
+        "name email dateOfBirth documents profileImage about education experience jobPreferences skills district province gender"
+      );
+
+    res.status(200).json({
+      message: "All work requests retrieved successfully",
+      requests,
+    });
+  } catch (error) {
+    console.error("Error fetching work requests:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const deleteWorkRequest = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const { id } = req.params;
+
+    if (!userId) return res.status(403).json({ message: 'Access Denied' });
+    if (!Types.ObjectId.isValid(id)) return res.status(400).json({ message: 'Invalid request id' });
+
+    const wr = await WorkRequest.findById(id);
+    if (!wr) return res.status(404).json({ message: 'Work request not found' });
+
+    // Check ownership
+    if (
+      wr.companyId.toString() !== userId &&
+      wr.employeeId.toString() !== userId
+    ) {
+      return res.status(403).json({ message: 'Access Denied' });
+    }
+
+    await wr.deleteOne();
+
+    res.status(200).json({ message: 'Work request deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting work request:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 /**
  * Upload company logo
  */
