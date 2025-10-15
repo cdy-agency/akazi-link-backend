@@ -14,7 +14,7 @@ const FileInfoSchema = new Schema<IFileInfo>({
 
 // Location schema
 const LocationSchema = new Schema<ILocation>({
-  province: { type: String, required: true },
+  province: { type: String },
   district: { type: String, required: true },
   sector: { type: String, required: true },
   cell: { type: String, required: true },
@@ -23,8 +23,12 @@ const LocationSchema = new Schema<ILocation>({
 
 // Work preferences schema
 const WorkPreferencesSchema = new Schema({
-  workDistrict: { type: String, required: true },
-  workSector: { type: String, required: true },
+  language: { type: String},
+  amountOfMoney: { type: String},
+  numberChildren: { type: String },
+  workType: { type: String },
+  vocationDays: { type: String },
+  married: { type: String },
   willingToWorkWithChildren: { type: Boolean, required: true }
 });
 
@@ -52,10 +56,11 @@ const HousekeeperSchema: Schema = new Schema<IHousekeeper>(
     idNumber: { type: String, required: true, unique: true },
     phoneNumber: { type: String, required: true },
     location: { type: LocationSchema, required: true },
-    workPreferences: { type: WorkPreferencesSchema, required: true },
+    workPreferences: { type: WorkPreferencesSchema},
     background: { type: BackgroundSchema, required: true },
     passportImage: { type: FileInfoSchema },
     fullBodyImage: { type: FileInfoSchema },
+    idImage: { type: FileInfoSchema },
     status: {
       type: String,
       enum: ["available", "hired", "inactive"],

@@ -208,8 +208,6 @@ export type HousekeeperRegistrationOptions = BaseEmailOptions & {
     idNumber: string;
     phoneNumber: string;
     location: string;
-    workDistrict: string;
-    workSector: string;
     logo?: string;
     platformName?: string;
     accentColor?: string;

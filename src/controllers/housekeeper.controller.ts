@@ -12,8 +12,13 @@ export const createHousekeeper = async (req: Request, res: Response) => {
       fullName,
       dateOfBirth,
       gender,
+      province,
+      district,
+      sector,
+      cell,
+      village,
       idNumber,
-      phoneNumber
+      phoneNumber,
     } = req.body;
 
     // Parse JSON fields from FormData
@@ -30,6 +35,7 @@ export const createHousekeeper = async (req: Request, res: Response) => {
     const uploadedImages = parseMultipleFiles((req.body as any).images);
     const passportImage = uploadedImages.find((img: any) => img.name?.toLowerCase().includes('passport')) || uploadedImages[0];
     const fullBodyImage = uploadedImages.find((img: any) => img.name?.toLowerCase().includes('fullbody') || img.name?.toLowerCase().includes('full-body')) || uploadedImages[1];
+    const idImage = uploadedImages.find((img: any) => img.name?.toLowerCase().includes('idImage')) || uploadedImages[2];
 
     if (!fullName || !dateOfBirth || !gender || !idNumber || !phoneNumber || !location || !workPreferences || !background) {
       return res.status(400).json({ 
@@ -50,10 +56,16 @@ export const createHousekeeper = async (req: Request, res: Response) => {
       idNumber,
       phoneNumber,
       location,
+      province,
+      district,
+      sector,
+      cell,
+      village,
       workPreferences,
       background,
       ...(passportImage ? { passportImage } : {}),
       ...(fullBodyImage ? { fullBodyImage } : {}),
+      ...(idImage ? {idImage} : {}),
       status: 'available'
     });
 
@@ -67,8 +79,6 @@ export const createHousekeeper = async (req: Request, res: Response) => {
           idNumber,
           phoneNumber,
           location: `${location.province}, ${location.district}`,
-          workDistrict: workPreferences.workDistrict,
-          workSector: workPreferences.workSector
         }
       });
     } catch (error) {

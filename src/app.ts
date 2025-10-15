@@ -42,8 +42,8 @@ app.use(cors({
 
 console.log(process.env.FRONTEND_URL)
 // Body parsing middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true })); 
+app.use(express.json({limit: '10mb'}));
+app.use(express.urlencoded({ limit: '10mb', extended: true })); 
 
 
 // Debug middleware for development

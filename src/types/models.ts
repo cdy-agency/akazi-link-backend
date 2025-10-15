@@ -135,9 +135,14 @@ export interface IEmployer extends Document {
   location: ILocation;
   villageLeaderNumber: string;
   partnerNumber: string;
+  married:  string,
+  familyMembers: string,
+  allTasks: string[]
+  electricity: string,
+  water: string,
+  vocationDays: string,
   churchName: string;
-  salaryRangeMin: number;
-  salaryRangeMax: number;
+  salary: number,
   profileImage?: IFileInfo;
   status: "pending" | "active" | "completed";
   selectedHousekeepers: Types.ObjectId[];
@@ -154,8 +159,12 @@ export interface IHousekeeper extends Document {
   phoneNumber: string;
   location: ILocation;
   workPreferences: {
-    workDistrict: string;
-    workSector: string;
+    language: string,
+    amountOfMoney: string,
+    workType: string,
+    vocationDays: string,
+    married: string,
+    numberChildren: string,
     willingToWorkWithChildren: boolean;
   };
   background: {
@@ -170,6 +179,7 @@ export interface IHousekeeper extends Document {
   };
   passportImage?: IFileInfo;
   fullBodyImage?: IFileInfo;
+  idImage?: IFileInfo,
   status: "available" | "hired" | "inactive";
   createdAt: Date;
   updatedAt: Date;

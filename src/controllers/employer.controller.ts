@@ -17,8 +17,13 @@ export const createEmployer = async (req: Request, res: Response) => {
       villageLeaderNumber,
       partnerNumber,
       churchName,
-      salaryRangeMin,
-      salaryRangeMax
+      salary,
+      married,
+      familyMembers,
+      allTasks,
+      vocationDays,
+      water, 
+      electricity,
     } = req.body;
 
     // Parse JSON fields from FormData
@@ -31,7 +36,7 @@ export const createEmployer = async (req: Request, res: Response) => {
 
     const profileImage = parseSingleFile((req.body as any).profileImage);
 
-    if (!name || !phoneNumber || !nationalId || !location || !villageLeaderNumber || !partnerNumber || !churchName || !salaryRangeMin || !salaryRangeMax) {
+    if (!name || !phoneNumber || !nationalId || !location || !villageLeaderNumber || !partnerNumber || !churchName || !salary) {
       return res.status(400).json({ 
         message: 'Please provide all required fields: name, phoneNumber, nationalId, location, villageLeaderNumber, partnerNumber, churchName, salaryRangeMin, salaryRangeMax' 
       });
@@ -43,6 +48,18 @@ export const createEmployer = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Employer with this national ID already exists' });
     }
 
+    let parsedTasks: string[] = [];
+      try {
+        parsedTasks =
+          typeof req.body.allTasks === "string"
+            ? JSON.parse(req.body.allTasks)
+            : Array.isArray(req.body.allTasks)
+            ? req.body.allTasks
+            : [];
+      } catch {
+        parsedTasks = [];
+    }
+
     const employer = await Employer.create({
       name,
       email,
@@ -52,8 +69,13 @@ export const createEmployer = async (req: Request, res: Response) => {
       villageLeaderNumber,
       partnerNumber,
       churchName,
-      salaryRangeMin: parseInt(salaryRangeMin),
-      salaryRangeMax: parseInt(salaryRangeMax),
+      salary: parseInt(salary),
+      married,
+      familyMembers,
+      allTasks: parsedTasks,
+      electricity,
+      water,
+      vocationDays,
       ...(profileImage ? { profileImage } : {}),
       status: 'pending'
     });
@@ -68,7 +90,7 @@ export const createEmployer = async (req: Request, res: Response) => {
           email: email || 'No email provided',
           nationalId,
           location: `${location.province}, ${location.district}`,
-          salaryRange: `${salaryRangeMin} - ${salaryRangeMax}`
+          salaryRange: `${salary}`
         }
       });
     } catch (error) {
