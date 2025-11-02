@@ -20,7 +20,7 @@ try {
     return res.status(403).json({ message: 'Access Denied: Employee ID not found in token' });
   }
 
-  const employee = await Employee.findById(employeeId).select('-password'); // Exclude password
+  const employee = await Employee.findById(employeeId).select('-password'); 
   if (!employee) {
     return res.status(404).json({ message: 'Employee not found' });
   }

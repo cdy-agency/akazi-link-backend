@@ -214,7 +214,6 @@ export const postJob = async (req: Request, res: Response) => {
     const {
       title,
       description,
-      image,
       skills,
       experience,
       province,
@@ -248,7 +247,6 @@ export const postJob = async (req: Request, res: Response) => {
       province,
       district,
       skills,
-      ...(image && typeof image === "object" ? { image } : {}),
       experience,
       employmentType,
       salary,
@@ -260,6 +258,8 @@ export const postJob = async (req: Request, res: Response) => {
       ...(applicationDeadlineAt ? { applicationDeadlineAt } : {}),
       companyId,
     });
+
+    console.log('this is the job information', job);
 
     // Find matched employees by jobPreferences
     const matchedEmployees = await (await import("../models/Employee")).default.find({
@@ -333,16 +333,6 @@ export const updateJob = async (req: Request, res: Response) => {
     if (typeof benefits !== 'undefined') set.benefits = benefits;
     const otherBenefits = maybeArray(bodyAny.otherBenefits);
     if (typeof otherBenefits !== 'undefined') set.otherBenefits = otherBenefits;
-
-    // Image (if provided by rod-fileupload, it'll be an object with url)
-    // Allow explicit image removal when bodyAny.image === null or 'delete'
-    if (bodyAny.image === null || bodyAny.image === 'delete') {
-      set.image = undefined;
-      (set as any).$unset = { image: 1 };
-    } else {
-      const image = parseSingleFileUpload(bodyAny.image);
-      if (image) set.image = image;
-    }
 
     // Handle deadline update
     if (typeof bodyAny.applicationDeadline !== 'undefined') {

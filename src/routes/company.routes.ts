@@ -48,7 +48,7 @@ router.patch('/profile', authorizeCompany({ requireApproval: false, allowDisable
 router.patch('/complete-profile', authorizeCompany({ requireApproval: false, allowDisabled: true }), completeCompanyProfile);
 
 // Posting jobs still requires approval
-router.post('/job', authorizeCompany({ requireApproval: true }), uploadSingle('image', cloudinary), postJob);
+router.post('/job', authorizeCompany({ requireApproval: true }),postJob);
 // Update existing job (image optional)
 router.patch('/job/:id', authorizeCompany({ requireApproval: true }), optionalUploadSingle('image'), updateJob);
 // Update existing job without file upload middleware (pure JSON/body)
