@@ -37,7 +37,14 @@ mongoose.connect(MONGO_URI)
 
 // Middleware
 app.use(cors({
-  origin:["https://job-platform-lake.vercel.app", "http://localhost:3000"],
+  origin: function (origin, callback) {
+    const allowedOrigins = [process.env.FRONTEND_URL, "http://localhost:3000"];
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  }
 }));
 
 console.log(process.env.FRONTEND_URL)
