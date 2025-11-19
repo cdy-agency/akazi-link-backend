@@ -242,7 +242,7 @@ export const deleteHousekeeper = async (req: Request, res: Response) => {
     res.status(200).json({ message: 'Housekeeper deleted successfully' });
   } catch (error) {
     console.error('Error deleting housekeeper:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error });
   }
 };
 

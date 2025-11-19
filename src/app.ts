@@ -17,6 +17,7 @@ import uploadRoutes from './routes/upload.routes';
 import { errorHandler } from './middlewares/errorHandler';
 import { seedSuperAdmin } from './utils/seed';
 import { migrateCompanyStatus } from './utils/seed';
+import publicFlyerRes from './routes/publicFlyer.route'
 
 dotenv.config();
 
@@ -119,6 +120,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/employers', employerRoutes);
 app.use('/api/housekeepers', housekeeperRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/flyer', publicFlyerRes)
 
 // Error handling middleware
 app.use(errorHandler);

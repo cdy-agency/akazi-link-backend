@@ -182,10 +182,6 @@ try {
 }
 };
 
-/**
- * Allow a logged-in company (even if not approved) to submit missing profile info
- * Expects: about (string), documents (string[] or string)
- */
 export const companyCompleteProfile = async (req: Request, res: Response) => {
   try {
     const { id, role } = (req as any).user || {};
@@ -228,5 +224,37 @@ export const companyCompleteProfile = async (req: Request, res: Response) => {
     console.log('company updated profile', company) 
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });
+  }
+};
+
+export const getCurrentUser = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    const role = (req as any).user?.role;
+
+    if (!userId || !role) return res.status(401).json({ message: "Unauthorized" });
+
+    let userData;
+
+    switch (role) {
+      case "employee":
+        userData = await Employee.findById(userId).select("-password");
+        break;
+      case "company":
+        userData = await Company.findById(userId).select("-password");
+        break;
+      case "superadmin":
+        userData = await User.findById(userId).select("-password");
+        break;
+      default:
+        return res.status(400).json({ message: "Invalid role" });
+    }
+
+    if (!userData) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json({ user: userData });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 };

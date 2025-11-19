@@ -183,3 +183,14 @@ export interface IHousekeeper extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface IPublicFlyer {
+  title: string;
+  description: string;
+  image: IFileInfo;
+  url: string;
+  from: string;
+  end: string
+  createdAt: Date;
+  updatedAt: Date;
+}
