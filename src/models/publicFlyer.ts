@@ -11,15 +11,23 @@ const FileInfoSchema = new Schema<IFileInfo>({
   time: { type: String, required: true }
 });
 
+const CommentSchema = new Schema({
+  userId: { type: String, required: true },
+  comment: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
 const PublicSchema = new Schema<IPublicFlyer>({
-    title: {type: String},
-    description: {type: String},
-    image: {type: FileInfoSchema},
-    url: {type: String},
-    from: {type: String},
-    end: {type: String},
-    createdAt: {type: Date, default:(Date.now)},
-    updatedAt: {type: Date, default:(Date.now)}
-})
+  title: { type: String },
+  description: { type: String },
+  image: { type: FileInfoSchema },
+  url: { type: String },
+  from: { type: String },
+  end: { type: String },
+  likes: [{ type: String }],
+  comments: [CommentSchema],
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
 
 export const PublicFlyerModel = mongoose.model<IPublicFlyer>('publicFlyer', PublicSchema) 

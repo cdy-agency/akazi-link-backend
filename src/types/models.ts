@@ -190,7 +190,20 @@ export interface IPublicFlyer {
   image: IFileInfo;
   url: string;
   from: string;
-  end: string
+  end: string;
+  likes: string[];
+  
+  comments: {
+  userId: string;
+  comment: string;
+  createdAt: Date;
+  replies?: {
+    userId: string;
+    comment: string;
+    createdAt: Date;
+  }[];
+}[]
+
   createdAt: Date;
   updatedAt: Date;
 }
