@@ -48,7 +48,9 @@ export const getFlyer = async (req: Request, res: Response) => {
 
     const flyers = await PublicFlyerModel.find(filter)
       .limit(limit)
-      .skip(skip);
+      .skip(skip)
+      .populate("comments.userId", "email role")
+      .populate("comments.replies.userId", "email role")
 
     const totalFlyers = await PublicFlyerModel.countDocuments(filter);
 
@@ -148,54 +150,6 @@ export const likeFlyer = async (req: Request, res: Response) => {
 
   } catch (error) {
     res.status(500).json({ message: "Failed to toggle like", error });
-  }
-};
-
-export const addComment = async (req: Request, res: Response) => {
-  try {
-    const { flyerId } = req.params;
-    const { userId, comment } = req.body;
-
-    if (!comment) {
-      return res.status(400).json({ message: "Comment cannot be empty" });
-    }
-
-    const flyer = await PublicFlyerModel.findById(flyerId);
-    if (!flyer) return res.status(404).json({ message: "Flyer not found" });
-
-    flyer.comments.push({ userId, comment, createdAt: new Date() });
-    await flyer.save();
-
-    res.status(201).json({
-      message: "Comment added",
-      comments: flyer.comments
-    });
-
-  } catch (error) {
-    res.status(500).json({ message: "Failed to add comment", error });
-  }
-};
-
-export const deleteComment = async (req: Request, res: Response) => {
-  try {
-    const { flyerId, commentId } = req.params;
-
-    const flyer = await PublicFlyerModel.findById(flyerId);
-    if (!flyer) return res.status(404).json({ message: "Flyer not found" });
-
-    flyer.comments = flyer.comments.filter(
-      (c: any) => c._id.toString() !== commentId
-    );
-
-    await flyer.save();
-
-    res.status(200).json({
-      message: "Comment deleted",
-      comments: flyer.comments
-    });
-
-  } catch (error) {
-    res.status(500).json({ message: "Failed to delete comment", error });
   }
 };
 

@@ -192,18 +192,16 @@ export interface IPublicFlyer {
   from: string;
   end: string;
   likes: string[];
-  
   comments: {
-  userId: string;
+   userId: Types.ObjectId | IUser;
   comment: string;
   createdAt: Date;
   replies?: {
-    userId: string;
+     userId: Types.ObjectId | IUser;
     comment: string;
     createdAt: Date;
   }[];
 }[]
-
   createdAt: Date;
   updatedAt: Date;
 }

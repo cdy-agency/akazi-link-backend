@@ -1,4 +1,4 @@
-import mongoose, { now, Schema } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 import { IPublicFlyer, IFileInfo } from "../types/models";
 
 const FileInfoSchema = new Schema<IFileInfo>({
@@ -11,10 +11,19 @@ const FileInfoSchema = new Schema<IFileInfo>({
   time: { type: String, required: true }
 });
 
-const CommentSchema = new Schema({
-  userId: { type: String, required: true },
+// Reply schema
+const ReplySchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: "User" },
   comment: { type: String, required: true },
   createdAt: { type: Date, default: Date.now }
+});
+
+// Comment schema
+const CommentSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: "User"},
+  comment: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
+  replies: [ReplySchema]  
 });
 
 const PublicSchema = new Schema<IPublicFlyer>({
@@ -24,10 +33,13 @@ const PublicSchema = new Schema<IPublicFlyer>({
   url: { type: String },
   from: { type: String },
   end: { type: String },
-  likes: [{ type: String }],
+  likes: [{ type: Schema.Types.ObjectId, ref: "User" }],
   comments: [CommentSchema],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
 
-export const PublicFlyerModel = mongoose.model<IPublicFlyer>('publicFlyer', PublicSchema) 
+export const PublicFlyerModel = mongoose.model<IPublicFlyer>(
+  'publicFlyer',
+  PublicSchema
+);
