@@ -3,23 +3,26 @@ import { PostFlyer, getFlyer,updateFlyer, deleteFlyer,likeFlyer} from "../contro
 import uploadSingle from "rod-fileupload";
 import cloudinary from "../config/cloudinary";
 import { addComment, deleteComment,addReply, updateReply, deleteReply, getReplies } from '../controllers/comments.controller';
+import { optionalUploadSingle } from '../middlewares/optionalUpload';
+import { Request, Response, NextFunction } from 'express';
+
+const conditionalImageUpload = (req: Request, res: Response, next: NextFunction) => {
+  const contentType = req.headers['content-type'] || '';
+  
+  if (contentType.includes('multipart/form-data')) {
+    return optionalUploadSingle('image')(req, res, next);
+  }
+  
+  next();
+};
+
 
 const router = Router()
-
-const optionalImageUpload = (req: any, res: any, next: any) => {
-  const upload = uploadSingle('image', cloudinary);
-  upload(req, res, (err: any) => {
-    if (err) {
-      console.log('No image uploaded, continuing...');
-    }
-    next();
-  });
-};
 
 // Post Flyer with image upload(FLYER CRUD)
 router.post('/', uploadSingle('image', cloudinary), PostFlyer)
 router.get('/', getFlyer)
-router.put('/:id',optionalImageUpload, updateFlyer)
+router.patch('/:id', conditionalImageUpload, updateFlyer);
 router.delete('/:id', deleteFlyer)
 
 // Like Flyer and add comments

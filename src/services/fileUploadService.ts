@@ -1,4 +1,4 @@
-import { Model, UpdateQuery } from 'mongoose';
+import { Document, Model, UpdateQuery } from 'mongoose';
 import { IFileInfo } from '../types/models';
 
 export type ParsedFiles = IFileInfo[];
@@ -22,6 +22,21 @@ export const parseMultipleFiles = (input: unknown): ParsedFiles => {
   return files;
 };
 
+
+
+// export const updateSingleFileFieldOptional = async (
+//   model: Model<any>,
+//   id: string,
+//   path: string,
+//   file: IFileInfo | undefined,
+//   select = '-password'
+// ) => {
+//   if (!file) return null;
+
+//   const update: UpdateQuery<any> = { $set: { [path]: file } };
+//   return model.findByIdAndUpdate(id, update, { new: true, runValidators: true }).select(select);
+// };
+
 export const updateSingleFileField = async <T extends { _id: any }>(
   model: Model<T>,
   id: string,
@@ -32,9 +47,25 @@ export const updateSingleFileField = async <T extends { _id: any }>(
   if (!file) {
     throw Object.assign(new Error('No file uploaded'), { statusCode: 400 });
   }
+
   const update: UpdateQuery<T> = { $set: { [path]: file } } as any;
-  const doc = await model.findByIdAndUpdate(id, update, { new: true, runValidators: true }).select(select as any);
-  return doc;
+  return model
+    .findByIdAndUpdate(id, update, { new: true, runValidators: true })
+    .select(select as any);
+};
+
+
+export const updateSingleFileFieldOptional = async (
+  model: Model<Document>,
+  id: string,
+  path: string,
+  file: IFileInfo | undefined,
+  select = '-password'
+) => {
+  if (!file) return null;
+
+  const update: UpdateQuery<any> = { $set: { [path]: file } };
+  return model.findByIdAndUpdate(id, update, { new: true, runValidators: true }).select(select as any);
 };
 
 export const pushMultipleFiles = async <T extends { _id: any }>(

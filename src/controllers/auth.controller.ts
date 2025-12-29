@@ -35,8 +35,6 @@ try {
     jobPreferences: Array.isArray(jobPreferences) ? jobPreferences : [],
   });
 
-  console.log('this is employee information', employee)
-
   try {
       await sendEmail({
         type: 'employeeRegistration',
