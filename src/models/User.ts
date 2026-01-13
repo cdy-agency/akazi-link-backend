@@ -5,8 +5,9 @@ const UserSchema: Schema = new Schema(
 {
   email: { type: String, required: true, unique: true },
   image: { type: String },
-  password: { type: String, required: true },
-  role: { type: String, enum: ['employee', 'company', 'superadmin'], required: true },
+  password: { type: String},
+  provider: { type: String, enum: ['EMAIL', 'GOOGLE', 'LINKEDIN'], default: 'EMAIL' },
+  role: { type: String, enum: ['employee', 'company', 'superadmin'], default: null },
   isActive: { type: Boolean, default: true },
 },
 { timestamps: true }

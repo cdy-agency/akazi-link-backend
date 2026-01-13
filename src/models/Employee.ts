@@ -4,7 +4,7 @@ import User from './User';
 
 const EmployeeSchema: Schema = new Schema(
 {
-  name: { type: String, required: true },
+  name: { type: String },
   dateOfBirth: { type: Date },
   phoneNumber: { type: String },
   district:{type:String},

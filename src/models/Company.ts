@@ -40,14 +40,14 @@ const TeamMemberSchema = new Schema({
 
 const CompanySchema: Schema = new Schema(
   {
-    companyName: { type: String, required: true },
+    companyName: { type: String},
     province: { type: String },
     district: { type: String },
     phoneNumber: { type: String },
     website: { type: String },
     logo: { type: FileInfoSchema },
     isApproved: { type: Boolean, default: false },
-    password: { type: String, required: true },
+    password: { type: String},
     about: { type: String },
     documents: { type: [FileInfoSchema], default: [] },
     notifications: { type: [NotificationSchema], default: [] },

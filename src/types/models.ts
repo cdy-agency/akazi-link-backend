@@ -21,6 +21,7 @@ export interface IUser extends Document {
   email: string;
   image?: string;
   password?: string;
+  provider: 'EMAIL' | 'GOOGLE' | 'LINKEDIN' 
   role: "employee" | "company" | "superadmin";
   isActive: boolean;
   createdAt: Date;
