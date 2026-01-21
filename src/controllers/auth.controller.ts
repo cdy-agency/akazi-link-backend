@@ -12,6 +12,7 @@ import { sendEmail } from "../utils/sendEmail";
 import AdminNotification from "../models/AdminNotification";
 import { verifyGoogleToken } from "../utils/googleAuth";
 import { signToken } from "../utils/jwt";
+import { Types } from "mongoose";
 
 export const registerEmployee = async (req: Request, res: Response) => {
   try {
@@ -357,7 +358,7 @@ export const setRole = async (req: Request, res: Response) => {
       
       // Directly update the database document
       await User.collection.updateOne(
-        { id: user._id },
+        { _id: new Types.ObjectId(user._id) },
         {
           $set: {
             __t: "Employee",
@@ -379,7 +380,7 @@ export const setRole = async (req: Request, res: Response) => {
       
       // Directly update the database document
       await User.collection.updateOne(
-        { id: user._id },
+        { _id: new Types.ObjectId(user._id)},
         {
           $set: {
             __t: "Company",
