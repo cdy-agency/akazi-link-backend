@@ -357,7 +357,7 @@ export const setRole = async (req: Request, res: Response) => {
       
       // Directly update the database document
       await User.collection.updateOne(
-        { _id: user._id },
+        { id: user._id },
         {
           $set: {
             __t: "Employee",
@@ -379,7 +379,7 @@ export const setRole = async (req: Request, res: Response) => {
       
       // Directly update the database document
       await User.collection.updateOne(
-        { _id: user._id },
+        { id: user._id },
         {
           $set: {
             __t: "Company",
