@@ -1,5 +1,5 @@
 import Router from 'express'
-import { PostFlyer, getFlyer,updateFlyer, deleteFlyer,likeFlyer} from "../controllers/publicFlyer.controller";
+import { PostFlyer, getFlyer,updateFlyer, deleteFlyer,likeFlyer, getFlyerById} from "../controllers/publicFlyer.controller";
 import uploadSingle from "rod-fileupload";
 import cloudinary from "../config/cloudinary";
 import { addComment, deleteComment,addReply, updateReply, deleteReply, getReplies } from '../controllers/comments.controller';
@@ -24,6 +24,7 @@ router.post('/', uploadSingle('image', cloudinary), PostFlyer)
 router.get('/', getFlyer)
 router.patch('/:id', conditionalImageUpload, updateFlyer);
 router.delete('/:id', deleteFlyer)
+router.get('/:id', getFlyerById);
 
 // Like Flyer and add comments
 router.post("/:flyerId/like", likeFlyer);

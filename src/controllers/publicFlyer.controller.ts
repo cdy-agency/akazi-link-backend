@@ -88,6 +88,44 @@ export const getFlyer = async (req: Request, res: Response) => {
   }
 };
 
+export const getFlyerById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid Flyer ID" });
+    }
+
+    const flyer = await PublicFlyerModel.findById(id)
+      .populate("comments.userId", "email role")
+      .populate("comments.replies.userId", "email role");
+
+    if (!flyer) {
+      return res.status(404).json({ message: "Flyer not found" });
+    }
+
+    const today = new Date();
+    const endDate = new Date(flyer.end);
+    const remainingTime = endDate.getTime() - today.getTime();
+    const remainingDays = Math.max(
+      Math.ceil(remainingTime / (1000 * 60 * 60 * 24)),
+      0
+    );
+
+    res.status(200).json({
+      data: {
+        ...flyer.toObject(),
+        status: remainingDays > 0 ? "active" : "end",
+        remainingDays,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to fetch flyer" });
+  }
+};
+
+
 export const updateFlyer = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
