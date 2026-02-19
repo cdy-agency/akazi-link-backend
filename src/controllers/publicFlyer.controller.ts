@@ -53,6 +53,7 @@ export const getFlyer = async (req: Request, res: Response) => {
     const flyers = await PublicFlyerModel.find(filter)
       .limit(limit)
       .skip(skip)
+      .sort({ createdAt: -1})
       .populate("comments.userId", "email role")
       .populate("comments.replies.userId", "email role");
 
