@@ -13,7 +13,7 @@ const authHeader = req.headers['authorization'];
 const token = authHeader && authHeader.split(' ')[1];
 
 if (!token) {
-  return res.status(401).json({ message: 'Access Denied: No token provided' });
+  return res.status(401).json({ message: 'Access Denied: Please Login' });
 }
 
 const decoded = verifyToken(token);
