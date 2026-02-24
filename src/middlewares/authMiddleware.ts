@@ -4,10 +4,8 @@ import Company from '../models/Company';
 import Employee from '../models/Employee';
 import User from '../models/User'; // Added import for User model
 
-/**
-* Middleware to authenticate JWT token.
-* Attaches user information to req.user if token is valid.
-*/
+// * Middleware to authenticate JWT token.
+// * Attaches user information to req.user if token is valid.
 export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
 const authHeader = req.headers['authorization'];
 const token = authHeader && authHeader.split(' ')[1];
