@@ -1,11 +1,30 @@
 import { Request, Response } from 'express';
 import { Types } from 'mongoose';
 import Housekeeper from '../models/Housekeeper';
-import { parseSingleFile, parseMultipleFiles } from '../services/fileUploadService';
+import { parseSingleFile } from '../services/fileUploadService';
 import { sendEmail } from '../utils/sendEmail';
 import AdminNotification from '../models/AdminNotification';
+import { IFileInfo } from '../types/models';
 
-// Create new housekeeper
+
+//  Dedicated single-image upload endpoint.
+export const uploadHousekeeperImage = async (req: Request, res: Response) => {
+  try {
+    const image = parseSingleFile((req.body as any).image);
+
+    if (!image) {
+      return res.status(400).json({ message: 'No image uploaded' });
+    }
+
+    return res.status(200).json({ image });
+  } catch (error) {
+    console.error('Error uploading housekeeper image:', error);
+    return res.status(500).json({ message: 'Image upload failed' });
+  }
+};
+
+
+// Creates a new housekeeper. Receives plain JSON — image fields contain
 export const createHousekeeper = async (req: Request, res: Response) => {
   try {
     const {
@@ -19,9 +38,12 @@ export const createHousekeeper = async (req: Request, res: Response) => {
       village,
       idNumber,
       phoneNumber,
+      passportImage,
+      fullBodyImage,
+      idImage,
     } = req.body;
 
-    // Parse JSON fields from FormData
+    // Parse JSON fields (may arrive as strings if sent via FormData, or already objects via JSON)
     let location, workPreferences, background;
     try {
       location = typeof req.body.location === 'string' ? JSON.parse(req.body.location) : req.body.location;
@@ -31,17 +53,16 @@ export const createHousekeeper = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Invalid JSON format in location, workPreferences, or background fields' });
     }
 
-    // Handle multiple file upload - extract passport and full body images
-    const uploadedImages = parseMultipleFiles((req.body as any).images);
-    const passportImage = uploadedImages.find((img: any) => img.name?.toLowerCase().includes('passport')) || uploadedImages[0];
-    const fullBodyImage = uploadedImages.find((img: any) => img.name?.toLowerCase().includes('fullbody') || img.name?.toLowerCase().includes('full-body')) || uploadedImages[1];
-    const idImage = uploadedImages.find((img: any) => img.name?.toLowerCase().includes('idImage')) || uploadedImages[2];
-
     if (!fullName || !dateOfBirth || !gender || !idNumber || !phoneNumber || !location || !workPreferences || !background) {
-      return res.status(400).json({ 
-        message: 'Please provide all required fields: fullName, dateOfBirth, gender, idNumber, phoneNumber, location, workPreferences, background' 
+      return res.status(400).json({
+        message: 'Please provide all required fields: fullName, dateOfBirth, gender, idNumber, phoneNumber, location, workPreferences, background',
       });
     }
+
+    // Images arrive as IFileInfo objects (already on Cloudinary) — just cast/validate them
+    const parsedPassportImage: IFileInfo | undefined = passportImage?.url ? passportImage : undefined;
+    const parsedFullBodyImage: IFileInfo | undefined = fullBodyImage?.url ? fullBodyImage : undefined;
+    const parsedIdImage: IFileInfo | undefined = idImage?.url ? idImage : undefined;
 
     // Check if housekeeper with this idNumber already exists
     const existingHousekeeper = await Housekeeper.findOne({ idNumber });
@@ -63,13 +84,13 @@ export const createHousekeeper = async (req: Request, res: Response) => {
       village,
       workPreferences,
       background,
-      ...(passportImage ? { passportImage } : {}),
-      ...(fullBodyImage ? { fullBodyImage } : {}),
-      ...(idImage ? {idImage} : {}),
-      status: 'available'
+      ...(parsedPassportImage ? { passportImage: parsedPassportImage } : {}),
+      ...(parsedFullBodyImage ? { fullBodyImage: parsedFullBodyImage } : {}),
+      ...(parsedIdImage ? { idImage: parsedIdImage } : {}),
+      status: 'available',
     });
 
-    // Send admin notification
+    // Send admin notification email
     try {
       await sendEmail({
         type: 'housekeeperRegistration',
@@ -79,7 +100,7 @@ export const createHousekeeper = async (req: Request, res: Response) => {
           idNumber,
           phoneNumber,
           location: `${location.province}, ${location.district}`,
-        }
+        },
       });
     } catch (error) {
       console.error('Failed to notify admin about housekeeper registration', error);
@@ -96,13 +117,13 @@ export const createHousekeeper = async (req: Request, res: Response) => {
       console.error('Failed to create admin system notification for housekeeper registration', error);
     }
 
-    res.status(201).json({ 
-      message: 'Housekeeper registered successfully', 
-      housekeeper: housekeeper.toJSON() 
+    return res.status(201).json({
+      message: 'Housekeeper registered successfully',
+      housekeeper: housekeeper.toJSON(),
     });
   } catch (error) {
     console.error('Error creating housekeeper:', error);
-    res.status(500).json({ message: 'Server error during housekeeper registration' });
+    return res.status(500).json({ message: 'Server error during housekeeper registration' });
   }
 };
 
@@ -120,16 +141,13 @@ export const getAllHousekeepers = async (req: Request, res: Response) => {
     }
 
     const [housekeepers, total] = await Promise.all([
-      Housekeeper.find(query)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit),
-      Housekeeper.countDocuments(query)
+      Housekeeper.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Housekeeper.countDocuments(query),
     ]);
 
     const totalPages = Math.ceil(total / limit);
 
-    res.status(200).json({
+    return res.status(200).json({
       message: 'Housekeepers retrieved successfully',
       housekeepers,
       pagination: {
@@ -138,12 +156,12 @@ export const getAllHousekeepers = async (req: Request, res: Response) => {
         totalItems: total,
         itemsPerPage: limit,
         hasNextPage: page < totalPages,
-        hasPrevPage: page > 1
-      }
+        hasPrevPage: page > 1,
+      },
     });
   } catch (error) {
     console.error('Error getting housekeepers:', error);
-    res.status(500).json({ message: 'Server error' });
+    return res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -162,13 +180,10 @@ export const getHousekeeperById = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Housekeeper not found' });
     }
 
-    res.status(200).json({
-      message: 'Housekeeper retrieved successfully',
-      housekeeper
-    });
+    return res.status(200).json({ message: 'Housekeeper retrieved successfully', housekeeper });
   } catch (error) {
     console.error('Error getting housekeeper by ID:', error);
-    res.status(500).json({ message: 'Server error' });
+    return res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -176,18 +191,10 @@ export const getHousekeeperById = async (req: Request, res: Response) => {
 export const updateHousekeeper = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const {
-      fullName,
-      dateOfBirth,
-      gender,
-      phoneNumber,
-      location,
-      workPreferences,
-      background
-    } = req.body;
+    const { fullName, dateOfBirth, gender, phoneNumber, location, workPreferences, background } = req.body;
 
-    const passportImage = parseSingleFile((req.body as any).passportImage);
-    const fullBodyImage = parseSingleFile((req.body as any).fullBodyImage);
+    const passportImage = parseSingleFile(req.body.passportImage);
+    const fullBodyImage = parseSingleFile(req.body.fullBodyImage);
 
     if (!Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: 'Invalid housekeeper ID' });
@@ -214,13 +221,10 @@ export const updateHousekeeper = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Housekeeper not found' });
     }
 
-    res.status(200).json({
-      message: 'Housekeeper updated successfully',
-      housekeeper
-    });
+    return res.status(200).json({ message: 'Housekeeper updated successfully', housekeeper });
   } catch (error) {
     console.error('Error updating housekeeper:', error);
-    res.status(500).json({ message: 'Server error' });
+    return res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -239,10 +243,10 @@ export const deleteHousekeeper = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Housekeeper not found' });
     }
 
-    res.status(200).json({ message: 'Housekeeper deleted successfully' });
+    return res.status(200).json({ message: 'Housekeeper deleted successfully' });
   } catch (error) {
     console.error('Error deleting housekeeper:', error);
-    res.status(500).json({ message: 'Server error', error });
+    return res.status(500).json({ message: 'Server error', error });
   }
 };
 
@@ -270,13 +274,10 @@ export const updateHousekeeperStatus = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Housekeeper not found' });
     }
 
-    res.status(200).json({
-      message: 'Housekeeper status updated successfully',
-      housekeeper
-    });
+    return res.status(200).json({ message: 'Housekeeper status updated successfully', housekeeper });
   } catch (error) {
     console.error('Error updating housekeeper status:', error);
-    res.status(500).json({ message: 'Server error' });
+    return res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -297,16 +298,13 @@ export const searchHousekeepersByLocation = async (req: Request, res: Response) 
     if (village) query['location.village'] = new RegExp(village as string, 'i');
 
     const [housekeepers, total] = await Promise.all([
-      Housekeeper.find(query)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit),
-      Housekeeper.countDocuments(query)
+      Housekeeper.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Housekeeper.countDocuments(query),
     ]);
 
     const totalPages = Math.ceil(total / limit);
 
-    res.status(200).json({
+    return res.status(200).json({
       message: 'Housekeepers found successfully',
       housekeepers,
       searchCriteria: { province, district, sector, cell, village },
@@ -316,12 +314,11 @@ export const searchHousekeepersByLocation = async (req: Request, res: Response) 
         totalItems: total,
         itemsPerPage: limit,
         hasNextPage: page < totalPages,
-        hasPrevPage: page > 1
-      }
+        hasPrevPage: page > 1,
+      },
     });
   } catch (error) {
     console.error('Error searching housekeepers by location:', error);
-    res.status(500).json({ message: 'Server error' });
+    return res.status(500).json({ message: 'Server error' });
   }
 };
-

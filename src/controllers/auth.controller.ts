@@ -252,8 +252,7 @@ export const googleLogin = async (req: Request, res: Response) => {
     // Existing Employee or Company
     if (employee || company) {
       const existingUser = employee || company;
-      console.log("✅ Found existing user with role:", existingUser?.role);
-
+      res.json({message: `Found existing user with role: ${existingUser?.role}`})
       // Link Google account if not already linked
       if (!existingUser?.provider || existingUser?.provider !== "GOOGLE") {
         existingUser!.provider = "GOOGLE";

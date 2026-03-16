@@ -6,15 +6,17 @@ import {
   updateHousekeeper,
   deleteHousekeeper,
   updateHousekeeperStatus,
-  searchHousekeepersByLocation
+  searchHousekeepersByLocation,
+  uploadHousekeeperImage
 } from '../controllers/housekeeper.controller';
-import { uploadMultiple } from "rod-fileupload";
+import uploadSingle, { uploadMultiple } from "rod-fileupload";
 import cloudinary from '../config/cloudinary';
 
 const router = Router();
 
+router.post('/upload-image', uploadSingle('image', cloudinary), uploadHousekeeperImage);
 // Housekeeper CRUD routes
-router.post('/', uploadMultiple('images', cloudinary), createHousekeeper);
+router.post('/', createHousekeeper);
 router.get('/', getAllHousekeepers);
 router.get('/search', searchHousekeepersByLocation);
 router.get('/:id', getHousekeeperById);
