@@ -252,7 +252,6 @@ export const googleLogin = async (req: Request, res: Response) => {
     // Existing Employee or Company
     if (employee || company) {
       const existingUser = employee || company;
-      res.json({message: `Found existing user with role: ${existingUser?.role}`})
       // Link Google account if not already linked
       if (!existingUser?.provider || existingUser?.provider !== "GOOGLE") {
         existingUser!.provider = "GOOGLE";
@@ -322,7 +321,9 @@ export const googleLogin = async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error("❌ Google login error:", err);
-    res.status(500).json({ message: "Server error during Google login" });
+    if (!res.headersSent) {
+      res.status(500).json({ message: "Server error during Google login" });
+    }
   }
 };
 
