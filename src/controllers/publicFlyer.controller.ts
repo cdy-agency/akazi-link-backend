@@ -170,19 +170,24 @@ export const updateFlyer = async (req: Request, res: Response) => {
 };
 
 export const likeFlyer = async (req: Request, res: Response) => {
-  try {``
+  try {
+    const user = req.user as { id: string; role: string } | undefined;
+    if (!user?.id) {
+      return res.status(403).json({ message: "Access Denied: User not authenticated" });
+    }
+
     const { flyerId } = req.params;
-    const { userId } = req.body;
+    const userId = user.id;
 
     const flyer = await PublicFlyerModel.findById(flyerId);
     if (!flyer) return res.status(404).json({ message: "Flyer not found" });
 
-    const alreadyLiked = flyer.likes.includes(userId);
+    const alreadyLiked = flyer.likes.some((id) => id.toString() === userId);
 
     if (alreadyLiked) {
-      flyer.likes = flyer.likes.filter((id) => id !== userId);
+      flyer.likes = flyer.likes.filter((id) => id.toString() !== userId);
     } else {
-      flyer.likes.push(userId);
+      flyer.likes.push(userId as any);
     }
 
     await flyer.save();
