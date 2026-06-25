@@ -1,3 +1,6 @@
+// LEGACY MODULE - SCHEDULED FOR DEPRECATION
+// Domestic Work / Housekeepers — superadmin-only until Phase 10 removal.
+
 import { Router } from 'express';
 import {
   createHousekeeper,
@@ -9,22 +12,29 @@ import {
   searchHousekeepersByLocation,
   uploadHousekeeperImage
 } from '../controllers/housekeeper.controller';
-import uploadSingle, { uploadMultiple } from "rod-fileupload";
+import uploadSingle from 'rod-fileupload';
 import cloudinary from '../config/cloudinary';
+import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware';
 
 const router = Router();
 
-router.post('/upload-image', uploadSingle('image', cloudinary), uploadHousekeeperImage);
-// Housekeeper CRUD routes
-router.post('/', createHousekeeper);
-router.get('/', getAllHousekeepers);
-router.get('/search', searchHousekeepersByLocation);
-router.get('/:id', getHousekeeperById);
-router.put('/:id', updateHousekeeper);
-router.delete('/:id', deleteHousekeeper);
+const superadminOnly = [
+  authenticateToken,
+  authorizeRoles(['superadmin']),
+];
 
-// Housekeeper specific routes
-router.put('/:id/status', updateHousekeeperStatus);
+// LEGACY MODULE - SCHEDULED FOR DEPRECATION
+router.post('/upload-image', ...superadminOnly, uploadSingle('image', cloudinary), uploadHousekeeperImage);
+
+// LEGACY MODULE - SCHEDULED FOR DEPRECATION
+router.post('/', ...superadminOnly, createHousekeeper);
+router.get('/', ...superadminOnly, getAllHousekeepers);
+router.get('/search', ...superadminOnly, searchHousekeepersByLocation);
+router.get('/:id', ...superadminOnly, getHousekeeperById);
+router.put('/:id', ...superadminOnly, updateHousekeeper);
+router.delete('/:id', ...superadminOnly, deleteHousekeeper);
+
+// LEGACY MODULE - SCHEDULED FOR DEPRECATION
+router.put('/:id/status', ...superadminOnly, updateHousekeeperStatus);
 
 export default router;
-
