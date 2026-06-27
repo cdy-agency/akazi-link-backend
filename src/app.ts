@@ -7,17 +7,16 @@ import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 
 import authRoutes from './routes/auth.routes';
+import authV1Routes from './routes/auth-v1.routes';
 import employeeRoutes from './routes/employee.routes';
-import companyRoutes from './routes/company.routes';
+import cvRoutes from './routes/cv.routes';
+import legacyDeprecationRoutes from './routes/legacy-deprecation.routes';
 import adminRoutes from './routes/admin.routes';
 import publicRoutes from './routes/public.routes';
-import employerRoutes from './routes/employer.routes';
-import housekeeperRoutes from './routes/housekeeper.routes';
 import uploadRoutes from './routes/upload.routes';
 import { errorHandler } from './middlewares/errorHandler';
 import { seedSuperAdmin } from './utils/seed';
-import { migrateCompanyStatus } from './utils/seed';
-import publicFlyerRes from './routes/publicFlyer.route'
+import { migrateApplicationStatuses } from './utils/migrateApplicationStatuses';
 
 dotenv.config();
 
@@ -28,8 +27,8 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/joblink';
 // Connect to MongoDB
 mongoose.connect(MONGO_URI)
 .then(() => {
-  seedSuperAdmin(); // Seed SuperAdmin after successful connection
-  migrateCompanyStatus(); // Migrate existing companies to new status fields
+  seedSuperAdmin();
+  migrateApplicationStatuses();
 })
 .catch((err) => {
   console.error('MongoDB connection error:', err);
@@ -114,13 +113,15 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // Routes
 app.use('/api', publicRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/v1/auth', authV1Routes);
 app.use('/api/employee', employeeRoutes);
-app.use('/api/company', companyRoutes);
+app.use('/api/cv', cvRoutes);
+app.use('/api/company', legacyDeprecationRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/employers', employerRoutes);
-app.use('/api/housekeepers', housekeeperRoutes);
+app.use('/api/employers', legacyDeprecationRoutes);
+app.use('/api/housekeepers', legacyDeprecationRoutes);
 app.use('/api/upload', uploadRoutes);
-app.use('/api/flyer', publicFlyerRes)
+app.use('/api/flyer', legacyDeprecationRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

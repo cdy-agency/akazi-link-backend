@@ -3,7 +3,8 @@ import { Types } from 'mongoose';
 import Employer from '../models/Employer';
 import Housekeeper from '../models/Housekeeper';
 import { parseSingleFile } from '../services/fileUploadService';
-import { sendEmail } from '../utils/sendEmail';
+import { emailService } from '../services/email/email.service';
+import { LegacyEmailTemplate } from '../services/email/email.types';
 import AdminNotification from '../models/AdminNotification';
 
 // Create new employer
@@ -82,9 +83,9 @@ export const createEmployer = async (req: Request, res: Response) => {
 
     // Send admin notification
     try {
-      await sendEmail({
-        type: 'employerRegistration',
+      await emailService.send({
         to: process.env.SMTP_USER || '',
+        template: LegacyEmailTemplate.EMPLOYER_REGISTRATION,
         data: {
           employerName: name,
           email: email || 'No email provided',

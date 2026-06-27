@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 import { Types } from 'mongoose';
 import Housekeeper from '../models/Housekeeper';
 import { parseSingleFile } from '../services/fileUploadService';
-import { sendEmail } from '../utils/sendEmail';
+import { emailService } from '../services/email/email.service';
+import { LegacyEmailTemplate } from '../services/email/email.types';
 import AdminNotification from '../models/AdminNotification';
 import { IFileInfo } from '../types/models';
 
@@ -92,9 +93,9 @@ export const createHousekeeper = async (req: Request, res: Response) => {
 
     // Send admin notification email
     try {
-      await sendEmail({
-        type: 'housekeeperRegistration',
+      await emailService.send({
         to: process.env.SMTP_USER || '',
+        template: LegacyEmailTemplate.HOUSEKEEPER_REGISTRATION,
         data: {
           housekeeperName: fullName,
           idNumber,

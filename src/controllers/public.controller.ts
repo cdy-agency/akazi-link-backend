@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import Job from '../models/Job';
 import User from '../models/User';
+import Employee from '../models/Employee';
 
 
 export const listPublicJobs = async (req: Request, res: Response) => {
@@ -9,10 +10,20 @@ export const listPublicJobs = async (req: Request, res: Response) => {
     const now = new Date();
     const query: any = {
       isActive: true,
-      $or: [
-        { applicationDeadlineAt: { $exists: false } },
-        { applicationDeadlineAt: { $gt: now } }
-      ]
+      $and: [
+        {
+          $or: [
+            { applicationDeadlineAt: { $exists: false } },
+            { applicationDeadlineAt: { $gt: now } },
+          ],
+        },
+        {
+          $or: [
+            { status: { $exists: false } },
+            { status: 'PUBLISHED' },
+          ],
+        },
+      ],
     };
 
     if (category && typeof category === 'string') {
@@ -32,10 +43,17 @@ export const listPublicJobs = async (req: Request, res: Response) => {
 
 export const listPublicUsers = async (req: Request, res: Response) => {
   try {
-    const users = await User.find()
+    const { status } = req.query;
+    const query: Record<string, unknown> = {};
+
+    if (status === 'active') {
+      query.isActive = { $ne: false };
+    }
+
+    const users = await Employee.find(query)
       .select('-password -__v')
       .sort({ createdAt: -1 });
-    
+
     res.status(200).json({ message: 'Users retrieved successfully', users });
   } catch (error) {
     console.error('Error getting users:', error);
@@ -50,10 +68,20 @@ export const getPublicJobById = async (req: Request, res: Response) => {
     const job = await Job.findOne({
       _id: id,
       isActive: true,
-      $or: [
-        { applicationDeadlineAt: { $exists: false } },
-        { applicationDeadlineAt: { $gt: now } }
-      ]
+      $and: [
+        {
+          $or: [
+            { applicationDeadlineAt: { $exists: false } },
+            { applicationDeadlineAt: { $gt: now } },
+          ],
+        },
+        {
+          $or: [
+            { status: { $exists: false } },
+            { status: 'PUBLISHED' },
+          ],
+        },
+      ],
     }).populate('companyId', 'companyName logo location about');
 
     if (!job) {

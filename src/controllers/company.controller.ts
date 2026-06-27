@@ -10,7 +10,11 @@ import { parseSingleFile, parseMultipleFiles, updateSingleFileField, pushMultipl
 import cloudinary from "../config/cloudinary";
 import { v2 as cloudinarySdk } from "cloudinary";
 import { parseSingleFile as parseSingleFileUpload } from '../services/fileUploadService';
-import { sendEmail } from "../utils/sendEmail";
+import { emailService } from "../services/email/email.service";
+import {
+  EmailTemplate,
+  LegacyEmailTemplate,
+} from "../services/email/email.types";
 import AdminNotification from "../models/AdminNotification";
 import Employee from "../models/Employee";
 import Application from "../models/Application";
@@ -166,8 +170,8 @@ export const completeCompanyProfile = async (req: Request, res: Response) => {
     // If transitioned to pending_review, notify admin via email and system
     if (prevStatus !== "pending_review" && nextStatus === "pending_review") {
       try {
-        await sendEmail({
-          type: "companyProfileCompletedNotify",
+        await emailService.send({
+          template: LegacyEmailTemplate.ADMIN_COMPANY_PROFILE_COMPLETED,
           to: process.env.SMTP_USER || "",
           data: {
             companyName: refreshed?.companyName || company.companyName,
@@ -289,7 +293,7 @@ export const updateJob = async (req: Request, res: Response) => {
 
     const job = await Job.findById(id);
     if (!job) return res.status(404).json({ message: "Job not found" });
-    if (job.companyId.toString() !== companyId) {
+    if (!job.companyId || job.companyId.toString() !== companyId) {
       return res
         .status(403)
         .json({ message: "Access Denied: You do not own this job" });
@@ -384,7 +388,7 @@ export const getCompanyJobById = async (req: Request, res: Response) => {
 
     const job = await Job.findById(id);
     if (!job) return res.status(404).json({ message: "Job not found" });
-    if (job.companyId.toString() !== companyId) {
+    if (!job.companyId || job.companyId.toString() !== companyId) {
       return res
         .status(403)
         .json({ message: "Access Denied: You do not own this job" });
@@ -473,7 +477,7 @@ export const deleteJob = async (req: Request, res: Response) => {
     }
 
     // Ensure the job belongs to the requesting company
-    if (job.companyId.toString() !== companyId) {
+    if (!job.companyId || job.companyId.toString() !== companyId) {
       return res.status(403).json({ message: 'Access Denied: You do not own this job' });
     }
 
@@ -531,7 +535,7 @@ export const getApplicantsForJob = async (req: Request, res: Response) => {
     }
 
     // Ensure the job belongs to the requesting company
-    if (job.companyId.toString() !== companyId) {
+    if (!job.companyId || job.companyId.toString() !== companyId) {
       return res
         .status(403)
         .json({ message: "Access Denied: You do not own this job" });
@@ -544,6 +548,7 @@ export const getApplicantsForJob = async (req: Request, res: Response) => {
     const [applicants, total] = await Promise.all([
       Application.find({ jobId })
         .populate("employeeId", "name email phoneNumber location about profileImage documents")
+        .populate("cvId", "fileName fileUrl fileSize mimeType uploadedAt version")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
@@ -611,7 +616,7 @@ export const updateApplicationStatus = async (req: Request, res: Response) => {
     const job = await Job.findById(application.jobId);
     if (!job) return res.status(404).json({ message: "Job not found" });
 
-    if (job.companyId.toString() !== companyId) {
+    if (!job.companyId || job.companyId.toString() !== companyId) {
       return res
         .status(403)
         .json({ message: "Access Denied: You do not own this job" });
@@ -636,30 +641,30 @@ export const updateApplicationStatus = async (req: Request, res: Response) => {
       if (employee?.email) {
         if (status === 'hired') {
           // Send special hired notification email
-          await sendEmail({
-            type: 'hiredNotification',
+          await emailService.send({
             to: employee.email,
+            template: LegacyEmailTemplate.HIRED_NOTIFICATION,
             data: {
               employeeName: employee.name,
               companyName: companyDoc?.companyName || 'Our Company',
               jobTitle: job.title,
               customMessage: customMessage,
               logo: (companyDoc as any)?.logo?.url || process.env.APP_LOGO || '',
-            } as any,
+            },
           });
         } else {
           // Send generic status update email for other statuses
           const subjectStatus = status.charAt(0).toUpperCase() + status.slice(1);
-          await sendEmail({
-            type: 'contactReply',
+          await emailService.send({
             to: employee.email,
+            template: LegacyEmailTemplate.GENERIC_MESSAGE,
             data: {
               contactName: employee.name,
               subject: `Application status updated: ${subjectStatus}`,
               content: customMessage,
               logo: (companyDoc as any)?.logo?.url || process.env.APP_LOGO || '',
-              companyName: companyDoc?.companyName || 'Recruitment Team',
-            } as any,
+              platformName: companyDoc?.companyName || 'Recruitment Team',
+            },
           });
         }
       }
@@ -775,19 +780,19 @@ export const sendWorkRequest = async (req: Request, res: Response) => {
 
     // 🔹 Send job offer email
     try {
-      await sendEmail({
-        type: "jobOffer",
+      await emailService.send({
         to: employee.email,
+        template: EmailTemplate.OFFER_SENT,
         data: {
           employeeName: employee.name,
           companyName: company.companyName,
           jobTitle: message || "Job Opportunity",
           jobDescription: message,
-          logo: process.env.APP_LOGO, // static app logo
+          logo: process.env.APP_LOGO,
           acceptOfferLink: `${process.env.APP_URL}/offers/${work._id}/accept`,
           offerExpiryDate: new Date(
             Date.now() + 7 * 24 * 60 * 60 * 1000
-          ).toDateString(), // expires in 7 days
+          ).toDateString(),
         },
       });
     } catch (emailError) {
@@ -1132,7 +1137,7 @@ export const toggleJobStatus = async (req: Request, res: Response) => {
 
     const job = await Job.findById(id);
     if (!job) return res.status(404).json({ message: 'Job not found' });
-    if (job.companyId.toString() !== companyId) {
+    if (!job.companyId || job.companyId.toString() !== companyId) {
       return res.status(403).json({ message: 'Access Denied: You do not own this job' });
     }
 
@@ -1164,7 +1169,7 @@ export const getMatchedEmployeesForJob = async (req: Request, res: Response) => 
     if (!job) {
       return res.status(404).json({ message: "Job not found" });
     }
-    if (job.companyId.toString() !== companyId) {
+    if (!job.companyId || job.companyId.toString() !== companyId) {
       return res.status(403).json({ message: "Access Denied: You do not own this job" });
     }
     const matchedEmployees = await (await import("../models/Employee")).default.find({

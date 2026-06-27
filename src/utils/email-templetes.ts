@@ -692,4 +692,40 @@ static housekeeperRegistrationNotify({
   `;
   return this.wrap('New Housekeeper Registration - ' + housekeeperName, companyName, accentColor, logoUrl, body);
 }
+
+  static emailVerificationOtp({
+    code,
+    expirationMinutes,
+    logoUrl = '',
+    companyName = 'Imihigo',
+    accentColor = '#0866ff',
+  }: {
+    code: string;
+    expirationMinutes: number;
+    logoUrl?: string;
+    companyName?: string;
+    accentColor?: string;
+  }): string {
+    const subject = 'Your verification code';
+    const body = `
+      <h2 style="margin-bottom:16px;font-family:'Google Sans',Roboto,Helvetica,Arial,sans-serif;font-size:24px;font-weight:600;color:#1f2937;">
+        Verify your email
+      </h2>
+      <p style="color:#374151;font-family:'Google Sans',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;margin:16px 0;">
+        Enter this verification code to activate your account:
+      </p>
+      <div style="text-align:center;margin:28px 0;">
+        <span style="display:inline-block;background:#f1f5f9;border:1px solid #e5e7eb;border-radius:8px;padding:16px 32px;font-size:32px;font-weight:700;letter-spacing:8px;color:#0866ff;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;">
+          ${code}
+        </span>
+      </div>
+      <p style="color:#6b7280;font-family:'Google Sans',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;margin:16px 0;">
+        This code expires in <strong>${expirationMinutes} minutes</strong>.
+      </p>
+      <p style="color:#9ca3af;font-family:'Google Sans',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.6;margin:24px 0 0;">
+        If you did not request this code, you can safely ignore this email.
+      </p>
+    `;
+    return this.wrap(subject, companyName, accentColor, logoUrl, body);
+  }
 }

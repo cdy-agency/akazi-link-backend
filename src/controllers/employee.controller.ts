@@ -10,7 +10,16 @@ import cloudinary from "../config/cloudinary";
 import { v2 as cloudinarySdk } from "cloudinary";
 import { comparePasswords, hashPassword } from '../utils/authUtils';
 import User from '../models/User';
-import { sendEmail } from '../utils/sendEmail';
+import { emailService } from '../services/email/email.service';
+import { LegacyEmailTemplate } from '../services/email/email.types';
+import { notifyAdminOfNewApplication } from './admin-applications.controller';
+import { resolveEmployeePrimaryCv } from './cv.controller';
+import { buildApplicationProfileSnapshot } from '../services/profile-draft.service';
+import {
+  calculateCandidateJobScore,
+  profileSnapshotToMatchProfile,
+  getRecommendedJobsForEmployee,
+} from '../services/matching.service';
 
 
 export const getProfile = async (req: Request, res: Response) => {
@@ -150,24 +159,9 @@ try {
     return res.status(400).json({ message: 'Invalid Job ID' });
   }
 
-  const job = await Job.findById(jobId).populate('companyId', 'email companyName');
+  const job = await Job.findById(jobId);
   if (!job) {
     return res.status(404).json({ message: 'Job not found' });
-  }
-
-  try {
-    await sendEmail({
-      to: (job.companyId as any).email,
-      type: 'jobApplication',
-      data: {
-        applicantName: employee?.name || '',
-        applicantEmail: employee?.email || '',
-        jobTitle: job.title,
-        jobId: (job._id as any).toString()
-      }
-    });
-  } catch (emailError) {
-    console.error('Failed to send job application email', emailError);
   }
 
   const existingApplication = await Application.findOne({ jobId, employeeId });
@@ -175,21 +169,33 @@ try {
     return res.status(400).json({ message: 'You have already applied for this job' });
   }
 
-  // Parse uploaded resume file (uploaded via middleware as complete file info object)
-  const resumeFile = parseSingleFile((req.body as any).resume);
+  const primaryCv = await resolveEmployeePrimaryCv(employeeId);
+  if (!primaryCv) {
+    return res.status(409).json({
+      message: 'Please upload your CV before applying.',
+    });
+  }
+
+  const profileSnapshot = await buildApplicationProfileSnapshot(employeeId);
+  const matchProfile = profileSnapshotToMatchProfile(profileSnapshot);
+  const matchResult = calculateCandidateJobScore(matchProfile, job);
 
   const application = await Application.create({
     jobId,
     employeeId,
-    skills: [],
-    experience,
+    cvId: primaryCv._id,
+    skills: profileSnapshot.skills || employee?.skills || [],
+    experience:
+      profileSnapshot.experience?.join('\n') || experience,
     coverLetter: typeof coverLetter === 'string' ? coverLetter : (typeof message === 'string' ? message : undefined),
-    resume: resumeFile?.url,
+    resume: primaryCv.fileUrl,
     appliedVia: appliedVia || 'normal',
-    status: 'pending',
+    status: 'APPLIED',
+    profileSnapshot,
+    matchScore: matchResult.score,
+    matchBreakdown: matchResult.breakdown,
   });
 
-  // Create system notification for the company
   try {
     await Application.findByIdAndUpdate(application._id, {
       $push: {
@@ -201,7 +207,26 @@ try {
       }
     });
   } catch (error) {
-    console.error('Failed to create system notification for company on job application', error);
+    console.error('Failed to create system notification on job application', error);
+  }
+
+  try {
+    await notifyAdminOfNewApplication({
+      applicantName: employee?.name || '',
+      applicantEmail: employee?.email || '',
+      jobTitle: job.title,
+      jobId: (job._id as any).toString(),
+      experience,
+      coverLetter:
+        typeof coverLetter === 'string'
+          ? coverLetter
+          : typeof message === 'string'
+            ? message
+            : undefined,
+      resumeLink: primaryCv.fileUrl,
+    });
+  } catch (notifyError) {
+    console.error('Failed to notify admin of job application', notifyError);
   }
 
   res.status(201).json({ message: 'Application submitted successfully', application });
@@ -209,6 +234,28 @@ try {
   console.error('Error applying for job:', error);
   res.status(500).json({ message: 'Server error' });
 }
+};
+
+export const getRecommendedJobs = async (req: Request, res: Response) => {
+  try {
+    const employeeId = req.user?.id;
+    if (!employeeId) {
+      return res.status(403).json({
+        message: 'Access Denied: Employee ID not found in token',
+      });
+    }
+
+    const limit = parseInt(req.query.limit as string, 10) || 20;
+    const recommendations = await getRecommendedJobsForEmployee(employeeId, limit);
+
+    res.status(200).json({
+      message: 'Recommended jobs retrieved successfully',
+      recommendations,
+    });
+  } catch (error) {
+    console.error('Error getting recommended jobs:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 };
 
 export const getApplications = async (req: Request, res: Response) => {
@@ -317,9 +364,9 @@ export const respondWorkRequest = async (req: Request, res: Response) => {
       ]);
 
       if (company?.email && employee?.name) {
-        await sendEmail({
-          type: 'offerResponse',
+        await emailService.send({
           to: (company as any).email,
+          template: LegacyEmailTemplate.OFFER_RESPONSE,
           data: {
             companyDisplayName: (company as any).companyName || 'Your Company',
             employeeName: (employee as any).name,
@@ -328,7 +375,7 @@ export const respondWorkRequest = async (req: Request, res: Response) => {
             viewRequestLink: `${process.env.FRONTEND_URL_DASHBOARD || process.env.APP_URL}/company/work-requests`,
             logo: (company as any)?.logo?.url || process.env.APP_LOGO || '',
           },
-        } as any);
+        });
       }
     } catch (emailError) {
       console.error('Failed to send offer response email to company', emailError);

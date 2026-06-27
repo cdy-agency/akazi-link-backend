@@ -8,11 +8,16 @@ import Employee from "../models/Employee";
 import Company from "../models/Company";
 import User from "../models/User";
 import { parseSingleFile } from "../services/fileUploadService";
-import { sendEmail } from "../utils/sendEmail";
+import { emailService } from "../services/email/email.service";
+import { LegacyEmailTemplate } from "../services/email/email.types";
 import AdminNotification from "../models/AdminNotification";
 import { verifyGoogleToken } from "../utils/googleAuth";
 import { signToken } from "../utils/jwt";
 import { Types } from "mongoose";
+import { isAuthV2LoginGateEnabled } from "../config/auth-v2.config";
+
+const LEGACY_COMPANY_MESSAGE =
+  "Company accounts are no longer supported. Please use the candidate registration flow or contact the platform administrator.";
 
 export const registerEmployee = async (req: Request, res: Response) => {
   try {
@@ -55,9 +60,9 @@ export const registerEmployee = async (req: Request, res: Response) => {
     });
 
     try {
-      await sendEmail({
-        type: "employeeRegistration",
+      await emailService.send({
         to: process.env.SMTP_USER || "",
+        template: LegacyEmailTemplate.ADMIN_CANDIDATE_REGISTRATION,
         data: {
           employeeName: name,
           email,
@@ -98,90 +103,11 @@ export const registerEmployee = async (req: Request, res: Response) => {
   }
 };
 
-export const registerCompany = async (req: Request, res: Response) => {
-  try {
-    const {
-      companyName,
-      email,
-      password,
-      district,
-      province,
-      phoneNumber,
-      website,
-    } = req.body as any;
-    const logo = parseSingleFile((req.body as any).logo);
-
-    if (!companyName || !email || !password) {
-      return res
-        .status(400)
-        .json({ message: "Please provide company name, email, and password" });
-    }
-
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: "Email already registered" });
-    }
-
-    const hashedPassword = await hashPassword(password);
-
-    const company = await Company.create({
-      companyName,
-      email,
-      password: hashedPassword,
-      role: "company",
-      district,
-      province,
-      phoneNumber,
-      website,
-      ...(logo ? { logo } : {}),
-      isApproved: false,
-      status: "pending",
-      isActive: true,
-    });
-
-    try {
-      await sendEmail({
-        type: "companyRegistration",
-        to: process.env.SMTP_USER || "",
-        data: {
-          companyName,
-          email,
-          district,
-          province,
-          website,
-          phoneNumber,
-          logo: logo?.url,
-        },
-      });
-    } catch (error) {
-      console.log("Failed to notify admin about company registration", error);
-    }
-
-    // Create admin system notification
-    try {
-      await AdminNotification.create({
-        message: `New company registered: ${companyName} (${email})`,
-        read: false,
-        createdAt: new Date(),
-      });
-    } catch (error) {
-      console.error(
-        "Failed to create admin system notification for company registration",
-        error
-      );
-    }
-
-    const companyObj = company.toObject();
-    res.status(201).json({
-      message: "Company registered successfully. Awaiting admin approval.",
-      company: companyObj,
-    });
-  } catch (error) {
-    console.error("Error registering company:", error);
-    res
-      .status(500)
-      .json({ message: "Server error during company registration" });
-  }
+export const registerCompany = async (_req: Request, res: Response) => {
+  return res.status(410).json({
+    message: LEGACY_COMPANY_MESSAGE,
+    code: "LEGACY_FEATURE_REMOVED",
+  });
 };
 
 export const login = async (req: Request, res: Response) => {
@@ -199,23 +125,47 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
+    if (user.role === "company") {
+      return res.status(410).json({
+        message: LEGACY_COMPANY_MESSAGE,
+        code: "LEGACY_FEATURE_REMOVED",
+      });
+    }
+
     const isMatch = await comparePasswords(password, user.password!);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    let responsePayload: { id: string; role: string; isApproved?: boolean } = {
-      id: (user._id as any).toString(),
+    if (isAuthV2LoginGateEnabled()) {
+      if (user.isActive === false) {
+        return res.status(403).json({
+          message: "Account is deactivated.",
+          code: "ACCOUNT_DEACTIVATED",
+        });
+      }
+
+      if (user.role === "employee" && user.emailVerified !== true) {
+        return res.status(403).json({
+          message: "Please verify your email before logging in.",
+          code: "EMAIL_NOT_VERIFIED",
+          requiresVerification: true,
+          email: user.email,
+        });
+      }
+    }
+
+    if (String(user.role) === "company") {
+      return res.status(410).json({
+        message: LEGACY_COMPANY_MESSAGE,
+        code: "LEGACY_FEATURE_REMOVED",
+      });
+    }
+
+    let responsePayload: { id: string; role: string } = {
+      id: String(user._id),
       role: user.role,
     };
-
-    if (user.role === "company") {
-      const company = await Company.findById(user._id as any);
-      if (!company) {
-        return res.status(400).json({ message: "Company profile not found" });
-      }
-      responsePayload.isApproved = company.isApproved;
-    }
 
     const token = generateToken(responsePayload);
 
@@ -223,9 +173,6 @@ export const login = async (req: Request, res: Response) => {
       message: "Login successful",
       token,
       role: user.role,
-      ...(user.role === "company" && {
-        isApproved: responsePayload.isApproved,
-      }),
     });
   } catch (error) {
     res.status(500).json({ message: "Server error during login" });
@@ -250,8 +197,15 @@ export const googleLogin = async (req: Request, res: Response) => {
     let company = await Company.findOne({ email: payload.email });
 
     // Existing Employee or Company
-    if (employee || company) {
-      const existingUser = employee || company;
+    if (company && !employee) {
+      return res.status(410).json({
+        message: LEGACY_COMPANY_MESSAGE,
+        code: "LEGACY_FEATURE_REMOVED",
+      });
+    }
+
+    if (employee) {
+      const existingUser = employee;
       // Link Google account if not already linked
       if (!existingUser?.provider || existingUser?.provider !== "GOOGLE") {
         existingUser!.provider = "GOOGLE";
@@ -275,9 +229,6 @@ export const googleLogin = async (req: Request, res: Response) => {
           email: existingUser?.email,
           profileImage: (existingUser as any).profileImage,
           role: existingUser?.role,
-          ...(existingUser?.role === "company" && {
-            isApproved: (existingUser as any).isApproved,
-          }),
         },
       });
     }
@@ -335,8 +286,12 @@ export const setRole = async (req: Request, res: Response) => {
     console.log("🎯 Setting role for user:", userId, "to", role);
 
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
-    if (!role || !["employee", "company"].includes(role))
-      return res.status(400).json({ message: "Invalid role" });
+    if (!role || role !== "employee") {
+      return res.status(410).json({
+        message: LEGACY_COMPANY_MESSAGE,
+        code: "LEGACY_FEATURE_REMOVED",
+      });
+    }
 
     // Find the base user
     const user = await User.findById(userId);
@@ -358,7 +313,7 @@ export const setRole = async (req: Request, res: Response) => {
       
       // Directly update the database document
       await User.collection.updateOne(
-        { _id: new Types.ObjectId(user._id) },
+        { _id: new Types.ObjectId(String(user._id)) },
         {
           $set: {
             __t: "Employee",
@@ -374,29 +329,10 @@ export const setRole = async (req: Request, res: Response) => {
 
       // Fetch as Employee
       userData = await Employee.findById(userId);
-      
-    } else if (role === "company") {
-      console.log("🏢 Converting to Company...");
-      
-      // Directly update the database document
-      await User.collection.updateOne(
-        { _id: new Types.ObjectId(user._id)},
-        {
-          $set: {
-            __t: "Company",
-            role: "company",
-            companyName: nameFromEmail,
-            phoneNumber: "",
-            isActive: true,
-            isApproved: false,
-            status: "pending",
-            profileImage: (user as any).profileImage,
-          }
-        }
-      );
+    }
 
-      // Fetch as Company
-      userData = await Company.findById(userId);
+    if (!userData) {
+      return res.status(500).json({ message: "Failed to set role" });
     }
 
     const jwtToken = signToken({ id: userData._id, role: userData.role });
@@ -409,8 +345,7 @@ export const setRole = async (req: Request, res: Response) => {
         email: userData.email,
         profileImage: userData.profileImage,
         role: userData.role,
-        name: role === "employee" ? userData.name : userData.companyName,
-        ...(role === "company" && { isApproved: userData.isApproved }),
+        name: userData.name,
       },
     });
   } catch (err: any) {

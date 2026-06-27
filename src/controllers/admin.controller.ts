@@ -5,7 +5,8 @@ import Company from '../models/Company';
 import Employee from '../models/Employee';
 import { comparePasswords, generateToken, hashPassword } from '../utils/authUtils';
 import { Types } from 'mongoose';
-import { sendEmail } from '../utils/sendEmail';
+import { emailService } from '../services/email/email.service';
+import { EmailTemplate } from '../services/email/email.types';
 import AdminNotification from '../models/AdminNotification';
 
 export const adminLogin = async (req: Request, res: Response) => {
@@ -159,12 +160,12 @@ try {
   }
 
   
-  await sendEmail({
+  await emailService.send({
   to: company.email,
-  type: "companyApproval",
+  template: EmailTemplate.ACCOUNT_APPROVED,
   data: {
+    accountName: company.companyName,
     companyName: company.companyName,
-    status: "approved",
     message: "Congratulations! Your company has been approved.",
     dashboardLink: `${process.env.FRONTEND_URL_DASHBOARD}/company`,
     logo: company.logo?.url || process.env.APP_LOGO,
@@ -227,16 +228,16 @@ try {
     return res.status(404).json({ message: 'Company not found' });
   }
 
-  await sendEmail({
+  await emailService.send({
     to: company.email,
-    type:'companyApproval',
-    data:{
+    template: EmailTemplate.ACCOUNT_REJECTED,
+    data: {
+      accountName: company.companyName,
       companyName: company.companyName,
-      status: 'rejected',
       message: rejectionReason,
       logo: process.env.APP_LOGO,
-    }
-  })
+    },
+  });
 
   // Company system notification
   try {
@@ -361,7 +362,9 @@ try {
 
 export const listAllUsers = async (req: Request, res: Response) => {
   try {
-    const users = await User.find().select('-password');
+    const users = await User.find()
+      .select('-password')
+      .sort({ createdAt: -1 });
     res.status(200).json({ message: 'Users retrieved successfully', users });
   } catch (error) {
     console.error('Error getting users:', error);
@@ -462,12 +465,12 @@ export const approveCompanyProfile = async (req: Request, res: Response) => {
 
     // Notify company via email and system notification
     try {
-      await sendEmail({
+      await emailService.send({
         to: company.email,
-        type: 'companyApproval',
+        template: EmailTemplate.ACCOUNT_APPROVED,
         data: {
+          accountName: company.companyName,
           companyName: company.companyName,
-          status: 'approved',
           message: 'Your profile has been approved. Welcome!',
           dashboardLink: `${process.env.FRONTEND_URL_DASHBOARD}/company`,
           logo: process.env.APP_LOGO,
@@ -543,12 +546,12 @@ export const rejectCompanyProfile = async (req: Request, res: Response) => {
 
     // Notify company via email and system notification
     try {
-      await sendEmail({
+      await emailService.send({
         to: company.email,
-        type: 'companyApproval',
+        template: EmailTemplate.ACCOUNT_REJECTED,
         data: {
+          accountName: company.companyName,
           companyName: company.companyName,
-          status: 'rejected',
           message: rejectionReason,
           logo: process.env.APP_LOGO,
         },

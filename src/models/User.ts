@@ -9,9 +9,13 @@ const UserSchema: Schema = new Schema(
   provider: { type: String, enum: ['EMAIL', 'GOOGLE', 'LINKEDIN'], default: 'EMAIL' },
   role: { type: String, enum: ['employee', 'company', 'superadmin'], default: null },
   isActive: { type: Boolean, default: true },
+  emailVerified: { type: Boolean, default: false },
+  emailVerifiedAt: { type: Date, default: null },
 },
 { timestamps: true }
 );
+
+UserSchema.index({ createdAt: -1 });
 
 const User = mongoose.model<IUser>('User', UserSchema);
 export default User;

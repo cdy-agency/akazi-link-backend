@@ -1,4 +1,5 @@
 import { Document, Types } from "mongoose";
+import { JobStatus } from "../config/job.config";
 
 // File interface for storing file information
 export interface IFileInfo {
@@ -24,8 +25,18 @@ export interface IUser extends Document {
   provider: 'EMAIL' | 'GOOGLE' | 'LINKEDIN' 
   role: "employee" | "company" | "superadmin";
   isActive: boolean;
+  emailVerified: boolean;
+  emailVerifiedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface IEmailOtp extends Document {
+  email: string;
+  otpHash: string;
+  expiresAt: Date;
+  attempts: number;
+  createdAt: Date;
 }
 
 export interface ICompany extends IUser {
@@ -57,13 +68,39 @@ export interface IEmployee extends IUser {
   dateOfBirth?: Date;
   image?: string
   phoneNumber?: string;
+  location?: string;
   jobPreferences?: string[];
   about?: string;
   experience?: string;
   education?: string;
   profileImage?: IFileInfo | string;
   skills?: string[];
+  languages?: string[];
+  certificates?: string[];
   documents?: (IFileInfo | string)[];
+  primaryCvId?: Types.ObjectId | null;
+  profileReviewStatus?: 'REVIEW_REQUIRED' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
+  profileApprovedAt?: Date;
+  profileReviewData?: {
+    fullName?: string;
+    email?: string;
+    phone?: string;
+    location?: string;
+    professionalSummary?: string;
+    skills?: string[];
+    interviewSkills?: string[];
+    education?: string[];
+    experience?: string[];
+    languages?: string[];
+    certifications?: string[];
+    certificates?: string[];
+    linkedInUrl?: string;
+    githubUrl?: string;
+    portfolioUrl?: string;
+    yearsOfExperience?: number;
+  };
+  profileReviewCvId?: Types.ObjectId | null;
+  profileStatus?: 'DRAFT' | 'REVIEW_REQUIRED' | 'APPROVED';
 }
 
 export interface IJob extends Document {
@@ -79,7 +116,10 @@ export interface IJob extends Document {
   otherBenefits?: string[],
   responsibilities?: string[],
   benefits?: string[];
-  companyId: Types.ObjectId;
+  companyId?: Types.ObjectId;
+  status?: JobStatus;
+  createdByAdminId?: Types.ObjectId;
+  updatedByAdminId?: Types.ObjectId;
   applicationDeadline: string;
   applicationDeadlineAt?: Date;
   isActive?: boolean;
@@ -96,12 +136,59 @@ export interface INotification {
 export interface IApplication extends Document {
   jobId: Types.ObjectId;
   employeeId: Types.ObjectId;
+  cvId?: Types.ObjectId;
   skills?: string[];
   experience?: string;
   resume?: string,
   coverLetter?: string,
   appliedVia: "normal" | "whatsapp" | "referral";
-  status: "pending" | "hired" | "rejected";
+  status:
+    | "pending"
+    | "hired"
+    | "rejected"
+    | "PENDING"
+    | "REVIEWED"
+    | "APPLIED"
+    | "UNDER_REVIEW"
+    | "SHORTLISTED"
+    | "INTERVIEW_SCHEDULED"
+    | "INTERVIEW_COMPLETED"
+    | "SELECTED"
+    | "OFFER_SENT"
+    | "REJECTED"
+    | "HIRED";
+  hiredAt?: Date;
+  profileSnapshot?: {
+    fullName?: string;
+    email?: string;
+    phone?: string;
+    location?: string;
+    professionalSummary?: string;
+    skills?: string[];
+    interviewSkills?: string[];
+    education?: string[];
+    experience?: string[];
+    languages?: string[];
+    certifications?: string[];
+    linkedInUrl?: string;
+    githubUrl?: string;
+    portfolioUrl?: string;
+    yearsOfExperience?: number;
+    capturedAt?: Date;
+  };
+  matchScore?: number;
+  matchBreakdown?: {
+    skills: { score: number; weight: number; matched: string[] };
+    experience: {
+      score: number;
+      weight: number;
+      matched: string[];
+      details?: string;
+    };
+    education: { score: number; weight: number; matched: string[] };
+    languages: { score: number; weight: number; matched: string[] };
+    certifications: { score: number; weight: number; matched: string[] };
+  };
   notifications: INotification[];
   createdAt: Date;
   updatedAt: Date;

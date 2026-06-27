@@ -7,24 +7,34 @@
     "start": "node dist/app.js",
     "dev": "nodemon --exec ts-node src/app.ts",
     "build": "tsc",
-    "seed": "ts-node src/utils/seed.ts"
+    "seed": "ts-node src/utils/seed.ts",
+    "migrate:email-verified": "ts-node src/scripts/migrate-email-verified.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.106.0",
+    "@types/pdf-parse": "^1.1.5",
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.7.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "google-auth-library": "^10.5.0",
+    "groq-sdk": "^1.3.0",
     "jsonwebtoken": "^9.0.3",
+    "mammoth": "^1.12.0",
     "mongoose": "^8.4.1",
     "nodemailer": "^7.0.6",
+    "pdf-img-convert": "^2.0.0",
+    "pdf-parse": "^2.4.5",
     "rod-fileupload": "^1.1.2",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.0"
+    "swagger-ui-express": "^5.0.0",
+    "tesseract.js": "^7.0.0",
+    "word-extractor": "^1.0.4",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",

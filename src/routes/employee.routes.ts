@@ -4,6 +4,7 @@ import {
   getJobsByCategory,
   getJobSuggestions,
   applyForJob,
+  getRecommendedJobs,
   getApplications,
   getNotifications,
   updateEmployeeProfile,
@@ -23,6 +24,19 @@ import {
   activateEmployeeAccount,
   deleteEmployeeAccount,
 } from '../controllers/employee.controller';
+import {
+  uploadCv,
+  getCv,
+  replaceCv,
+  deleteCv,
+  downloadCv,
+  retryCvProcessing,
+} from '../controllers/cv.controller';
+import { getEmployeeInterviews } from '../controllers/employee-interviews.controller';
+import {
+  getEmployeeOffers,
+  respondEmployeeOffer,
+} from '../controllers/employee-offers.controller';
 import { authenticateToken, authorizeRoles, ensureEmployeeActive } from '../middlewares/authMiddleware';
 import uploadSingle, {uploadMultiple} from 'rod-fileupload';
 import cloudinary from '../config/cloudinary';
@@ -45,6 +59,14 @@ router.patch('/update/documents', ensureEmployeeActive(), uploadMultiple('docume
 router.delete('/delete/image', ensureEmployeeActive(), deleteProfileImage);
 router.delete('/delete/document/:index', ensureEmployeeActive(), deleteDocument);
 
+// CV management
+router.post('/cv', ensureEmployeeActive(), uploadSingle('cv', cloudinary), uploadCv);
+router.get('/cv', getCv);
+router.put('/cv', ensureEmployeeActive(), uploadSingle('cv', cloudinary), replaceCv);
+router.delete('/cv', ensureEmployeeActive(), deleteCv);
+router.post('/cv/retry-processing', ensureEmployeeActive(), retryCvProcessing);
+router.get('/cv/download', downloadCv);
+
 // Password reset route
 router.patch('/reset-password', resetPassword);
 
@@ -54,7 +76,13 @@ router.get('/jobs', getJobsByCategory);
 
 router.get('/suggestions', getJobSuggestions);
 
-router.post('/apply/:jobId', ensureEmployeeActive(), uploadSingle('resume', cloudinary), applyForJob);
+router.get('/recommended-jobs', getRecommendedJobs);
+
+router.get('/interviews', getEmployeeInterviews);
+router.get('/offers', getEmployeeOffers);
+router.patch('/offers/:id/respond', ensureEmployeeActive(), respondEmployeeOffer);
+
+router.post('/apply/:jobId', ensureEmployeeActive(), applyForJob);
 
 router.get('/check-application/:jobId', checkJobApplication);
 
@@ -69,9 +97,5 @@ router.delete('/notifications/:notificationId', deleteEmployeeNotification);
 router.patch('/deactivate', deactivateEmployeeAccount);
 router.patch('/activate', activateEmployeeAccount);
 router.delete('/delete', deleteEmployeeAccount);
-
-// Work requests
-router.get('/work-requests', listWorkRequests);
-router.patch('/work-requests/:id/respond', respondWorkRequest);
 
 export default router;

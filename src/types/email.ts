@@ -67,6 +67,11 @@ export type JobApplicationOptions = BaseEmailOptions & {
   applicantEmail: string;
   jobTitle: string;
   jobId: string;
+  experience?: string;
+  skills?: string[];
+  coverLetter?: string;
+  resumeLink?: string;
+  applicantProfileLink?: string;
 };
 };
 
@@ -211,6 +216,17 @@ export type HousekeeperRegistrationOptions = BaseEmailOptions & {
     logo?: string;
     platformName?: string;
     accentColor?: string;
+  };
+};
+
+export type EmailVerificationOtpOptions = BaseEmailOptions & {
+  type: 'emailVerificationOtp';
+  data: {
+    code: string;
+    expirationMinutes: number;
+    platformName?: string;
+    accentColor?: string;
+    logo?: string;
   };
 };
 
