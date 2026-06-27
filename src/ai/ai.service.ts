@@ -1,7 +1,7 @@
 import Groq from 'groq-sdk';
 
 /**
- * Legacy document classifier — Express-compatible (no NestJS).
+ * Legacy document classifier—Express-compatible (no NestJS).
  * CV extraction uses `cv-ai.service.ts`.
  */
 export class AiService {
