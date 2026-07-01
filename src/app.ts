@@ -38,7 +38,7 @@ mongoose.connect(MONGO_URI)
 // Middleware
 app.use(cors({
   origin: function (origin, callback) {
-    const allowedOrigins = [process.env.FRONTEND_URL, "http://localhost:3000"];
+    const allowedOrigins = [process.env.FRONTEND_URL, process.env.DEV_FRONTEND_URL, "http://localhost:3000"];
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
