@@ -2,39 +2,113 @@ import { Request, Response } from 'express';
 import Job from '../models/Job';
 import User from '../models/User';
 import Employee from '../models/Employee';
+import Company from '../models/Company';
 
+function buildPublicJobBaseQuery(now = new Date()) {
+  return {
+    isActive: true,
+    $and: [
+      {
+        $or: [
+          { applicationDeadlineAt: { $exists: false } },
+          { applicationDeadlineAt: { $gt: now } },
+        ],
+      },
+      {
+        $or: [
+          { status: { $exists: false } },
+          { status: 'PUBLISHED' },
+        ],
+      },
+    ],
+  };
+}
+
+function normalizeEmploymentType(value: string) {
+  const normalized = value.toLowerCase().replace(/[\s_-]/g, '');
+  if (normalized === 'parttime') return 'part-time';
+  return normalized;
+}
 
 export const listPublicJobs = async (req: Request, res: Response) => {
   try {
-    const { category } = req.query;
-    const now = new Date();
-    const query: any = {
-      isActive: true,
-      $and: [
-        {
-          $or: [
-            { applicationDeadlineAt: { $exists: false } },
-            { applicationDeadlineAt: { $gt: now } },
-          ],
-        },
-        {
-          $or: [
-            { status: { $exists: false } },
-            { status: 'PUBLISHED' },
-          ],
-        },
-      ],
-    };
+    const {
+      category,
+      q,
+      employmentType,
+      province,
+      district,
+      page,
+      limit,
+    } = req.query;
 
-    if (category && typeof category === 'string') {
-      query.category = category;
+    const now = new Date();
+    const query: Record<string, unknown> = buildPublicJobBaseQuery(now);
+
+    if (category && typeof category === 'string' && category.trim()) {
+      query.category = category.trim();
     }
 
-    const jobs = await Job.find(query)
-      .sort({ createdAt: -1 })
-      .populate('companyId', 'companyName logo location about');
+    if (province && typeof province === 'string' && province.trim()) {
+      query.province = province.trim();
+    }
 
-    res.status(200).json({ message: 'Jobs retrieved successfully', jobs });
+    if (district && typeof district === 'string' && district.trim()) {
+      query.district = district.trim();
+    }
+
+    if (employmentType && typeof employmentType === 'string' && employmentType !== 'all') {
+      query.employmentType = normalizeEmploymentType(employmentType);
+    }
+
+    if (q && typeof q === 'string' && q.trim()) {
+      const regex = new RegExp(q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      const matchingCompanies = await Company.find({ companyName: regex }).select('_id').lean();
+      const companyIds = matchingCompanies.map((company) => company._id);
+
+      const searchConditions: Record<string, unknown>[] = [
+        { title: regex },
+        { description: regex },
+        { province: regex },
+        { district: regex },
+        { category: regex },
+      ];
+
+      if (companyIds.length > 0) {
+        searchConditions.push({ companyId: { $in: companyIds } });
+      }
+
+      (query.$and as Record<string, unknown>[]).push({ $or: searchConditions });
+    }
+
+    const pageNum = Math.max(1, Number.parseInt(String(page || '1'), 10) || 1);
+    const limitNum = Math.min(
+      100,
+      Math.max(1, Number.parseInt(String(limit || '50'), 10) || 50)
+    );
+    const skip = (pageNum - 1) * limitNum;
+
+    const [jobs, total, categories] = await Promise.all([
+      Job.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .populate('companyId', 'companyName logo location about'),
+      Job.countDocuments(query),
+      Job.distinct('category', {
+        ...buildPublicJobBaseQuery(now),
+        category: { $exists: true, $nin: ['', null] },
+      }),
+    ]);
+
+    res.status(200).json({
+      message: 'Jobs retrieved successfully',
+      jobs,
+      total,
+      page: pageNum,
+      limit: limitNum,
+      categories: (categories as string[]).filter(Boolean).sort(),
+    });
   } catch (error) {
     console.error('Error listing public jobs:', error);
     res.status(500).json({ message: 'Server error' });

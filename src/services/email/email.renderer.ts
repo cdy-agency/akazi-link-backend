@@ -21,6 +21,19 @@ import {
   renderAccountApprovedEmail,
   renderAccountRejectedEmail,
 } from './templates/account-approved.template';
+import {
+  renderProviderRegistrationApprovedEmail,
+  renderProviderRegistrationRejectedEmail,
+  renderProviderRegistrationSubmittedEmail,
+} from './templates/provider-registration.template';
+import {
+  renderServiceRequestAcceptedEmail,
+  renderServiceRequestAdminNewEmail,
+  renderServiceRequestCompletedEmail,
+  renderServiceRequestNewEmail,
+  renderServiceRequestRejectedEmail,
+  renderServiceRequestSubmittedEmail,
+} from './templates/service-request.template';
 import { renderAdminCandidateRegistrationEmail } from './templates/admin-candidate-registration.template';
 import {
   renderAdminCompanyProfileCompletedEmail,
@@ -101,6 +114,33 @@ export function renderEmail(params: SendEmailParams): RenderedEmail {
       break;
     case EmailTemplate.ACCOUNT_REJECTED:
       rendered = renderAccountRejectedEmail(data as never);
+      break;
+    case EmailTemplate.PROVIDER_REGISTRATION_SUBMITTED:
+      rendered = renderProviderRegistrationSubmittedEmail(data as never);
+      break;
+    case EmailTemplate.PROVIDER_REGISTRATION_APPROVED:
+      rendered = renderProviderRegistrationApprovedEmail(data as never);
+      break;
+    case EmailTemplate.PROVIDER_REGISTRATION_REJECTED:
+      rendered = renderProviderRegistrationRejectedEmail(data as never);
+      break;
+    case EmailTemplate.SERVICE_REQUEST_SUBMITTED:
+      rendered = renderServiceRequestSubmittedEmail(data as never);
+      break;
+    case EmailTemplate.SERVICE_REQUEST_ACCEPTED:
+      rendered = renderServiceRequestAcceptedEmail(data as never);
+      break;
+    case EmailTemplate.SERVICE_REQUEST_REJECTED:
+      rendered = renderServiceRequestRejectedEmail(data as never);
+      break;
+    case EmailTemplate.SERVICE_REQUEST_COMPLETED:
+      rendered = renderServiceRequestCompletedEmail(data as never);
+      break;
+    case EmailTemplate.SERVICE_REQUEST_NEW:
+      rendered = renderServiceRequestNewEmail(data as never);
+      break;
+    case EmailTemplate.SERVICE_REQUEST_ADMIN_NEW:
+      rendered = renderServiceRequestAdminNewEmail(data as never);
       break;
     case LegacyEmailTemplate.ADMIN_CANDIDATE_REGISTRATION:
       rendered = renderAdminCandidateRegistrationEmail(data as never);

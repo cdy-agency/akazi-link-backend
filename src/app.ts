@@ -14,6 +14,8 @@ import legacyDeprecationRoutes from './routes/legacy-deprecation.routes';
 import adminRoutes from './routes/admin.routes';
 import publicRoutes from './routes/public.routes';
 import uploadRoutes from './routes/upload.routes';
+import marketplaceRoutes from './routes/marketplace.routes';
+import providerRoutes from './routes/provider.routes';
 import { errorHandler } from './middlewares/errorHandler';
 import { seedSuperAdmin } from './utils/seed';
 import { migrateApplicationStatuses } from './utils/migrateApplicationStatuses';
@@ -121,6 +123,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/employers', legacyDeprecationRoutes);
 app.use('/api/housekeepers', legacyDeprecationRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/marketplace', marketplaceRoutes);
+app.use('/api/provider', providerRoutes);
 app.use('/api/flyer', legacyDeprecationRoutes);
 
 // Error handling middleware

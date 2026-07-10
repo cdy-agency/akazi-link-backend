@@ -10,6 +10,15 @@ export enum EmailTemplate {
   OFFER_SENT = 'OFFER_SENT',
   ACCOUNT_APPROVED = 'ACCOUNT_APPROVED',
   ACCOUNT_REJECTED = 'ACCOUNT_REJECTED',
+  PROVIDER_REGISTRATION_SUBMITTED = 'PROVIDER_REGISTRATION_SUBMITTED',
+  PROVIDER_REGISTRATION_APPROVED = 'PROVIDER_REGISTRATION_APPROVED',
+  PROVIDER_REGISTRATION_REJECTED = 'PROVIDER_REGISTRATION_REJECTED',
+  SERVICE_REQUEST_SUBMITTED = 'SERVICE_REQUEST_SUBMITTED',
+  SERVICE_REQUEST_ACCEPTED = 'SERVICE_REQUEST_ACCEPTED',
+  SERVICE_REQUEST_REJECTED = 'SERVICE_REQUEST_REJECTED',
+  SERVICE_REQUEST_COMPLETED = 'SERVICE_REQUEST_COMPLETED',
+  SERVICE_REQUEST_NEW = 'SERVICE_REQUEST_NEW',
+  SERVICE_REQUEST_ADMIN_NEW = 'SERVICE_REQUEST_ADMIN_NEW',
 }
 
 /** Legacy flows preserved during platform cleanup — same HTML as pre-refactor */
@@ -254,6 +263,63 @@ export type AdminContactMessageEmailData = {
   accentColor?: string;
 };
 
+export type ProviderRegistrationSubmittedEmailData = {
+  name: string;
+  providerType: 'COMPANY' | 'INDIVIDUAL';
+  dashboardUrl?: string;
+  platformName?: string;
+  logo?: string;
+};
+
+export type ProviderRegistrationApprovedEmailData = {
+  name: string;
+  dashboardUrl?: string;
+  platformName?: string;
+  logo?: string;
+};
+
+export type ProviderRegistrationRejectedEmailData = {
+  name: string;
+  reason?: string;
+  platformName?: string;
+  logo?: string;
+};
+
+export type ServiceRequestSubmittedEmailData = {
+  customerName: string;
+  providerName: string;
+  serviceName: string;
+  platformName?: string;
+  logo?: string;
+};
+
+export type ServiceRequestCustomerStatusEmailData = {
+  customerName: string;
+  providerName: string;
+  serviceName: string;
+  status?: string;
+  note?: string;
+  platformName?: string;
+  logo?: string;
+};
+
+export type ServiceRequestNewEmailData = {
+  providerName: string;
+  customerName: string;
+  serviceName: string;
+  requestId?: string;
+  platformName?: string;
+  logo?: string;
+};
+
+export type ServiceRequestAdminNewEmailData = {
+  customerName: string;
+  providerName: string;
+  serviceName: string;
+  platformName?: string;
+  logo?: string;
+};
+
 export type EmailTemplateDataMap = {
   [EmailTemplate.OTP]: OtpEmailData;
   [EmailTemplate.WELCOME]: WelcomeEmailData;
@@ -266,6 +332,15 @@ export type EmailTemplateDataMap = {
   [EmailTemplate.OFFER_SENT]: OfferSentEmailData;
   [EmailTemplate.ACCOUNT_APPROVED]: AccountApprovedEmailData;
   [EmailTemplate.ACCOUNT_REJECTED]: AccountRejectedEmailData;
+  [EmailTemplate.PROVIDER_REGISTRATION_SUBMITTED]: ProviderRegistrationSubmittedEmailData;
+  [EmailTemplate.PROVIDER_REGISTRATION_APPROVED]: ProviderRegistrationApprovedEmailData;
+  [EmailTemplate.PROVIDER_REGISTRATION_REJECTED]: ProviderRegistrationRejectedEmailData;
+  [EmailTemplate.SERVICE_REQUEST_SUBMITTED]: ServiceRequestSubmittedEmailData;
+  [EmailTemplate.SERVICE_REQUEST_ACCEPTED]: ServiceRequestCustomerStatusEmailData;
+  [EmailTemplate.SERVICE_REQUEST_REJECTED]: ServiceRequestCustomerStatusEmailData;
+  [EmailTemplate.SERVICE_REQUEST_COMPLETED]: ServiceRequestCustomerStatusEmailData;
+  [EmailTemplate.SERVICE_REQUEST_NEW]: ServiceRequestNewEmailData;
+  [EmailTemplate.SERVICE_REQUEST_ADMIN_NEW]: ServiceRequestAdminNewEmailData;
 };
 
 export type LegacyEmailTemplateDataMap = {

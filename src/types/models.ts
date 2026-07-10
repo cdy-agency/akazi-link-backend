@@ -23,7 +23,7 @@ export interface IUser extends Document {
   image?: string;
   password?: string;
   provider: 'EMAIL' | 'GOOGLE' | 'LINKEDIN' 
-  role: "employee" | "company" | "superadmin";
+  role: "employee" | "company" | "superadmin" | "service_provider";
   isActive: boolean;
   emailVerified: boolean;
   emailVerifiedAt: Date | null;
@@ -101,6 +101,76 @@ export interface IEmployee extends IUser {
   };
   profileReviewCvId?: Types.ObjectId | null;
   profileStatus?: 'DRAFT' | 'REVIEW_REQUIRED' | 'APPROVED';
+}
+
+export interface IBusinessHours {
+  day: string;
+  open: string;
+  close: string;
+  isClosed?: boolean;
+}
+
+export interface IServiceProvider extends IUser {
+  providerType: 'COMPANY' | 'INDIVIDUAL';
+  displayName: string;
+  slug: string;
+  phone: string;
+  whatsapp?: string;
+  password: string;
+  description?: string;
+  yearsOfExperience?: number;
+  languages?: string[];
+  businessHours?: IBusinessHours[];
+  tin?: string;
+  nationalId?: string;
+  province: string;
+  district: string;
+  sector?: string;
+  address?: string;
+  logo: IFileInfo;
+  gallery?: IFileInfo[];
+  portfolioImages?: IFileInfo[];
+  certificates?: IFileInfo[];
+  status: 'PENDING' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
+  rejectionReason?: string;
+  approvedAt?: Date;
+  approvedBy?: Types.ObjectId;
+  pricingModel?: 'NEGOTIABLE' | 'HOURLY' | 'DAILY' | 'FIXED';
+  pricingNotes?: string;
+  availabilityStatus: 'AVAILABLE' | 'BUSY' | 'UNAVAILABLE';
+  availabilityNotes?: string;
+  averageRating: number;
+  reviewCount: number;
+}
+
+export interface IServiceRequestStatusHistory {
+  status: string;
+  note?: string;
+  changedBy?: Types.ObjectId;
+  changedByRole?: string;
+  createdAt: Date;
+}
+
+export interface IServiceRequest extends Document {
+  customerId?: Types.ObjectId | null;
+  customerName: string;
+  customerPhone: string;
+  customerWhatsapp: string;
+  customerEmail?: string;
+  preferredContactMethod: 'PHONE' | 'WHATSAPP' | 'EMAIL';
+  providerId: Types.ObjectId;
+  serviceId: Types.ObjectId;
+  preferredDate?: Date;
+  province: string;
+  district: string;
+  sector?: string;
+  address: string;
+  description: string;
+  attachments?: IFileInfo[];
+  status: string;
+  statusHistory: IServiceRequestStatusHistory[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface IJob extends Document {

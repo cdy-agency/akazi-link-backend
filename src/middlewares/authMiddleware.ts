@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/authUtils';
 import Company from '../models/Company';
 import Employee from '../models/Employee';
+import ServiceProvider from '../models/ServiceProvider';
 import User from '../models/User'; // Added import for User model
 
 // * Middleware to authenticate JWT token.
@@ -51,6 +52,21 @@ return async (req: Request, res: Response, next: NextFunction) => {
     }
   }
 
+  // Special check for service provider approval
+  if (role === 'service_provider') {
+    const provider = await ServiceProvider.findById(id);
+    if (
+      !provider ||
+      provider.status !== 'APPROVED' ||
+      provider.isActive === false
+    ) {
+      return res.status(403).json({
+        message:
+          'Access Denied: Service provider account is not approved or is inactive',
+      });
+    }
+  }
+
   next();
 };
 };
@@ -92,6 +108,29 @@ export const authorizeCompany = (options?: { requireApproval?: boolean; allowDis
   };
 };
 
+/**
+ * Allow service providers pending approval to access limited routes (e.g. profile).
+ */
+export const authorizeServiceProvider = (options?: { requireApproval?: boolean }) => {
+  const { requireApproval = true } = options || {};
+  return async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(403).json({ message: 'Access Denied: User not authenticated' });
+    }
+    if (req.user.role !== 'service_provider') {
+      return res.status(403).json({ message: 'Access Denied: Insufficient permissions' });
+    }
+    const provider = await ServiceProvider.findById(req.user.id);
+    if (!provider) {
+      return res.status(403).json({ message: 'Access Denied: Service provider not found' });
+    }
+    if (requireApproval && provider.status !== 'APPROVED') {
+      return res.status(403).json({ message: 'Access Denied: Service provider not approved' });
+    }
+    next();
+  };
+};
+
 // Ensure employee is active for write operations
 export const ensureEmployeeActive = () => {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -113,5 +152,29 @@ export const ensureEmployeeActive = () => {
     } catch (e) {
       return res.status(500).json({ message: 'Server error' });
     }
+  };
+};
+
+/**
+ * Attaches user when a valid JWT is present; does not block anonymous access.
+ */
+export const optionalAuthenticateToken = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return next();
   }
-}
+
+  const decoded = verifyToken(token);
+  if (decoded && typeof decoded !== 'string') {
+    // @ts-expect-error
+    req.user = decoded;
+  }
+
+  next();
+};

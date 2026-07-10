@@ -98,6 +98,24 @@ import {
 
 import { getAdminPipelineMetrics } from '../controllers/admin-pipeline.controller';
 
+import {
+  createAdminMarketplaceCategory,
+  createAdminMarketplaceService,
+  deleteAdminMarketplaceCategory,
+  deleteAdminMarketplaceService,
+  getAdminMarketplaceOverview,
+  getAdminMarketplaceProviderById,
+  getAdminServiceRequestById,
+  listAdminMarketplaceCategories,
+  listAdminMarketplaceProviders,
+  listAdminMarketplaceServices,
+  listAdminServiceRequestsHandler,
+  updateAdminMarketplaceCategory,
+  updateAdminMarketplaceProviderStatus,
+  updateAdminMarketplaceService,
+  updateAdminServiceRequestStatus,
+} from '../controllers/admin-marketplace.controller';
+
 import { legacyGoneHandler } from './legacy-deprecation.routes';
 
 import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware';
@@ -226,7 +244,21 @@ router.post('/offers', createAdminOffer);
 
 router.post('/offers/:id/send', sendAdminOffer);
 
-
+router.get('/marketplace/overview', getAdminMarketplaceOverview);
+router.get('/marketplace/categories', listAdminMarketplaceCategories);
+router.post('/marketplace/categories', createAdminMarketplaceCategory);
+router.patch('/marketplace/categories/:id', updateAdminMarketplaceCategory);
+router.delete('/marketplace/categories/:id', deleteAdminMarketplaceCategory);
+router.get('/marketplace/services', listAdminMarketplaceServices);
+router.post('/marketplace/services', createAdminMarketplaceService);
+router.patch('/marketplace/services/:id', updateAdminMarketplaceService);
+router.delete('/marketplace/services/:id', deleteAdminMarketplaceService);
+router.get('/marketplace/providers', listAdminMarketplaceProviders);
+router.get('/marketplace/providers/:id', getAdminMarketplaceProviderById);
+router.patch('/marketplace/providers/:id/status', updateAdminMarketplaceProviderStatus);
+router.get('/marketplace/service-requests', listAdminServiceRequestsHandler);
+router.get('/marketplace/service-requests/:id', getAdminServiceRequestById);
+router.patch('/marketplace/service-requests/:id/status', updateAdminServiceRequestStatus);
 
 export default router;
 

@@ -6,6 +6,7 @@ import {
 } from "../utils/authUtils";
 import Employee from "../models/Employee";
 import Company from "../models/Company";
+import ServiceProvider from "../models/ServiceProvider";
 import User from "../models/User";
 import { parseSingleFile } from "../services/fileUploadService";
 import { emailService } from "../services/email/email.service";
@@ -160,6 +161,21 @@ export const login = async (req: Request, res: Response) => {
         message: LEGACY_COMPANY_MESSAGE,
         code: "LEGACY_FEATURE_REMOVED",
       });
+    }
+
+    if (user.role === "service_provider") {
+      const provider = await ServiceProvider.findById(user._id);
+      if (!provider) {
+        return res.status(403).json({ message: "Service provider profile not found" });
+      }
+      if (provider.status !== "APPROVED") {
+        return res.status(403).json({
+          message:
+            "Your service provider application is not approved yet. You will be notified by email once reviewed.",
+          code: "PROVIDER_NOT_APPROVED",
+          status: provider.status,
+        });
+      }
     }
 
     let responsePayload: { id: string; role: string } = {
@@ -388,6 +404,13 @@ export const getCurrentUser = async (req: Request, res: Response) => {
 
       case "superadmin":
         userData = await User.findById(userId).select("-password");
+        break;
+
+      case "service_provider":
+        userData = await ServiceProvider.findById(userId).select("-password");
+        if (!userData) {
+          return res.status(404).json({ message: "Service provider profile not found" });
+        }
         break;
 
       default:

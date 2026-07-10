@@ -8,7 +8,8 @@
     "dev": "nodemon --exec ts-node src/app.ts",
     "build": "tsc",
     "seed": "ts-node src/utils/seed.ts",
-    "migrate:email-verified": "ts-node src/scripts/migrate-email-verified.ts"
+    "migrate:email-verified": "ts-node src/scripts/migrate-email-verified.ts",
+    "seed:marketplace": "ts-node src/scripts/seed-marketplace-catalog.ts"
   },
   "keywords": [],
   "author": "",
