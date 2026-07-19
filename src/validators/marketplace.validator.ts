@@ -24,7 +24,7 @@ export const providerRegistrationSchema = z
     categoryIds: z.array(z.string().min(1)).min(1),
     serviceIds: z.array(z.string().min(1)).min(1),
     email: z.string().email(),
-    password: z.string().min(8),
+    password: z.string().min(8).optional(),
     phone: z.string().min(8),
     whatsapp: z.string().optional(),
     description: z.string().min(20),
@@ -125,7 +125,9 @@ export const createServiceRequestSchema = z.object({
   preferredDate: z.string().optional(),
   province: z.string().min(1),
   district: z.string().min(1),
-  sector: z.string().optional(),
+  sector: z.string().min(1),
+  cell: z.string().min(1),
+  village: z.string().min(1),
   address: z.string().min(3),
   description: z.string().min(10),
   attachments: z.array(fileInfoSchema).optional(),
@@ -142,6 +144,21 @@ export const updateServiceRequestStatusSchema = z.object({
   ]),
   note: z.string().optional(),
 });
+
+export const changeProviderPasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Current password is required'),
+    newPassword: z.string().min(8, 'New password must be at least 8 characters'),
+    confirmPassword: z.string().min(8, 'Confirm password is required'),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  })
+  .refine((data) => data.currentPassword !== data.newPassword, {
+    message: 'New password must be different from the current password',
+    path: ['newPassword'],
+  });
 
 export const adminServiceRequestQuerySchema = z.object({
   status: z.string().optional(),

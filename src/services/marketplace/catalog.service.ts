@@ -109,6 +109,8 @@ export async function updateProviderStatus(
   await provider.save();
 
   const dashboardUrl = `${process.env.FRONTEND_URL_DASHBOARD || process.env.APP_URL || ''}/dashboard/provider`;
+  const appUrl = process.env.FRONTEND_URL || process.env.APP_URL || '';
+  const loginUrl = appUrl ? `${appUrl.replace(/\/$/, '')}/login` : '';
 
   if (status === 'APPROVED') {
     await emailService.send({
@@ -116,7 +118,9 @@ export async function updateProviderStatus(
       template: EmailTemplate.PROVIDER_REGISTRATION_APPROVED,
       data: {
         name: provider.displayName,
+        email: provider.email,
         dashboardUrl,
+        loginUrl,
       },
     });
 

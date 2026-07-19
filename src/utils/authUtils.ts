@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
@@ -6,6 +7,17 @@ dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretjwtkey';
 const SALT_ROUNDS = 10;
+
+/**
+ * Generates a temporary password for service provider accounts.
+ * Mix of letters, numbers, and symbols — suitable to email and change on first login.
+ */
+export const generateTemporaryPassword = (length = 12): string => {
+  const alphabet =
+    'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+  const bytes = crypto.randomBytes(length);
+  return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join('');
+};
 
 /**
 * Hashes a plain text password.

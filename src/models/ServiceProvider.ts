@@ -17,6 +17,7 @@ const ServiceProviderSchema = new Schema<IServiceProvider>(
     phone: { type: String, required: true },
     whatsapp: { type: String },
     password: { type: String, required: true },
+    mustChangePassword: { type: Boolean, default: true },
     description: { type: String },
     yearsOfExperience: { type: Number, min: 0 },
     languages: { type: [String], default: [] },

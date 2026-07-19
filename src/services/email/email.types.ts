@@ -266,15 +266,22 @@ export type AdminContactMessageEmailData = {
 export type ProviderRegistrationSubmittedEmailData = {
   name: string;
   providerType: 'COMPANY' | 'INDIVIDUAL';
+  email: string;
+  temporaryPassword: string;
+  loginUrl?: string;
   dashboardUrl?: string;
   platformName?: string;
+  accentColor?: string;
   logo?: string;
 };
 
 export type ProviderRegistrationApprovedEmailData = {
   name: string;
+  email?: string;
+  loginUrl?: string;
   dashboardUrl?: string;
   platformName?: string;
+  accentColor?: string;
   logo?: string;
 };
 

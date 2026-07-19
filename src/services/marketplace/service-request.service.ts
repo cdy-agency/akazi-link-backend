@@ -73,7 +73,9 @@ export async function createServiceRequest(
     preferredDate?: string;
     province: string;
     district: string;
-    sector?: string;
+    sector: string;
+    cell: string;
+    village: string;
     address: string;
     description: string;
     attachments?: unknown[];
@@ -101,6 +103,16 @@ export async function createServiceRequest(
     throw Object.assign(new Error('Service not found'), { statusCode: 404 });
   }
 
+  const locationLine = [
+    input.village,
+    input.cell,
+    input.sector,
+    input.district,
+    input.province,
+  ]
+    .filter(Boolean)
+    .join(', ');
+
   const request = await ServiceRequest.create({
     customerId: customerId || null,
     customerName: input.customerName,
@@ -114,6 +126,8 @@ export async function createServiceRequest(
     province: input.province,
     district: input.district,
     sector: input.sector,
+    cell: input.cell,
+    village: input.village,
     address: input.address,
     description: input.description,
     attachments: input.attachments || [],
@@ -127,16 +141,42 @@ export async function createServiceRequest(
     ],
   });
 
+  const inboxMessage = [
+    `${input.customerName} requested ${service.name}.`,
+    `Phone: ${input.customerPhone}`,
+    `WhatsApp: ${input.customerWhatsapp}`,
+    input.customerEmail ? `Email: ${input.customerEmail}` : null,
+    `Location: ${locationLine}`,
+    `Address: ${input.address}`,
+    `Details: ${input.description}`,
+  ]
+    .filter(Boolean)
+    .join(' | ');
+
   await createProviderNotification({
     providerId: input.providerId,
     type: 'SERVICE_REQUEST_NEW',
     title: 'New service request',
-    message: `${input.customerName} requested ${service.name}.`,
-    metadata: { requestId: String(request._id) },
+    message: inboxMessage,
+    metadata: {
+      requestId: String(request._id),
+      customerName: input.customerName,
+      customerPhone: input.customerPhone,
+      customerWhatsapp: input.customerWhatsapp,
+      customerEmail: input.customerEmail,
+      serviceName: service.name,
+      province: input.province,
+      district: input.district,
+      sector: input.sector,
+      cell: input.cell,
+      village: input.village,
+      address: input.address,
+      description: input.description,
+    },
   });
 
   await AdminNotification.create({
-    message: `New service request from ${input.customerName} for ${service.name} (${provider.displayName})`,
+    message: `New service request from ${input.customerName} for ${service.name} (${provider.displayName}) — ${locationLine}`,
     read: false,
     createdAt: new Date(),
   });

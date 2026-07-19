@@ -117,6 +117,7 @@ export interface IServiceProvider extends IUser {
   phone: string;
   whatsapp?: string;
   password: string;
+  mustChangePassword: boolean;
   description?: string;
   yearsOfExperience?: number;
   languages?: string[];
@@ -164,6 +165,8 @@ export interface IServiceRequest extends Document {
   province: string;
   district: string;
   sector?: string;
+  cell?: string;
+  village?: string;
   address: string;
   description: string;
   attachments?: IFileInfo[];

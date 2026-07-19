@@ -4,7 +4,10 @@ import Service from '../../models/Service';
 import ServiceProvider from '../../models/ServiceProvider';
 import ProviderCategory from '../../models/ProviderCategory';
 import ProviderService from '../../models/ProviderService';
-import { hashPassword } from '../../utils/authUtils';
+import {
+  generateTemporaryPassword,
+  hashPassword,
+} from '../../utils/authUtils';
 import { uniqueSlug } from '../../utils/slugify';
 import { emailService } from '../email/email.service';
 import { EmailTemplate } from '../email/email.types';
@@ -18,7 +21,7 @@ export type ProviderRegistrationInput = {
   categoryIds: string[];
   serviceIds: string[];
   email: string;
-  password: string;
+  password?: string;
   phone: string;
   whatsapp?: string;
   description: string;
@@ -77,9 +80,8 @@ async function assertCatalogSelections(
 }
 
 export async function registerServiceProvider(input: ProviderRegistrationInput) {
-  const existing = await User.findOne({
-    email: input.email.trim().toLowerCase(),
-  });
+  const email = input.email.trim().toLowerCase();
+  const existing = await User.findOne({ email });
   if (existing) {
     throw Object.assign(new Error('Email already registered'), { statusCode: 409 });
   }
@@ -91,10 +93,13 @@ export async function registerServiceProvider(input: ProviderRegistrationInput) 
     return Boolean(found);
   });
 
-  const hashedPassword = await hashPassword(input.password);
+  const providedPassword = input.password?.trim();
+  const plainPassword = providedPassword || generateTemporaryPassword(12);
+  const mustChangePassword = !providedPassword;
+  const hashedPassword = await hashPassword(plainPassword);
 
   const provider = await ServiceProvider.create({
-    email: input.email.trim().toLowerCase(),
+    email,
     role: 'service_provider',
     provider: 'EMAIL',
     emailVerified: false,
@@ -105,6 +110,7 @@ export async function registerServiceProvider(input: ProviderRegistrationInput) 
     phone: input.phone,
     whatsapp: input.whatsapp,
     password: hashedPassword,
+    mustChangePassword,
     description: input.description,
     yearsOfExperience: input.yearsOfExperience,
     languages: input.languages || [],
@@ -152,8 +158,11 @@ export async function registerServiceProvider(input: ProviderRegistrationInput) 
     );
   }
 
+  const appUrl = process.env.FRONTEND_URL || process.env.APP_URL || '';
   const dashboardUrl =
-    process.env.FRONTEND_URL_DASHBOARD || process.env.APP_URL || '';
+    process.env.FRONTEND_URL_DASHBOARD ||
+    (appUrl ? `${appUrl.replace(/\/$/, '')}/dashboard/provider` : '');
+  const loginUrl = appUrl ? `${appUrl.replace(/\/$/, '')}/login` : '';
 
   try {
     await emailService.send({
@@ -162,6 +171,9 @@ export async function registerServiceProvider(input: ProviderRegistrationInput) 
       data: {
         name: provider.displayName,
         providerType: provider.providerType,
+        email: provider.email,
+        temporaryPassword: plainPassword,
+        loginUrl,
         dashboardUrl,
       },
     });
@@ -180,7 +192,7 @@ export async function registerServiceProvider(input: ProviderRegistrationInput) 
     type: 'PROVIDER_REGISTRATION_SUBMITTED',
     title: 'Registration submitted',
     message:
-      'Your service provider application has been submitted and is pending review.',
+      'Your service provider application has been submitted and is pending review. Check your email for temporary login credentials.',
   });
 
   return provider;

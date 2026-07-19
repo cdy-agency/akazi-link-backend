@@ -176,6 +176,28 @@ export const login = async (req: Request, res: Response) => {
           status: provider.status,
         });
       }
+
+      const token = generateToken({
+        id: String(user._id),
+        role: user.role,
+      });
+
+      return res.status(200).json({
+        message: "Login successful",
+        token,
+        role: user.role,
+        mustChangePassword: Boolean(provider.mustChangePassword),
+        user: {
+          id: String(provider._id),
+          email: provider.email,
+          displayName: provider.displayName,
+          providerType: provider.providerType,
+          role: "service_provider",
+          status: provider.status,
+          logo: provider.logo,
+          mustChangePassword: Boolean(provider.mustChangePassword),
+        },
+      });
     }
 
     let responsePayload: { id: string; role: string } = {

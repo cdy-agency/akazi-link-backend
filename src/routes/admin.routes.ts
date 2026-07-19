@@ -116,6 +116,16 @@ import {
   updateAdminServiceRequestStatus,
 } from '../controllers/admin-marketplace.controller';
 
+import {
+  createAdminAdvertisement,
+  deleteAdminAdvertisement,
+  duplicateAdminAdvertisement,
+  getAdminAdvertisementById,
+  listAdminAdvertisements,
+  updateAdminAdvertisement,
+  uploadAdminAdvertisementMedia,
+} from '../controllers/admin-advertisement.controller';
+
 import { legacyGoneHandler } from './legacy-deprecation.routes';
 
 import { authenticateToken, authorizeRoles } from '../middlewares/authMiddleware';
@@ -259,6 +269,18 @@ router.patch('/marketplace/providers/:id/status', updateAdminMarketplaceProvider
 router.get('/marketplace/service-requests', listAdminServiceRequestsHandler);
 router.get('/marketplace/service-requests/:id', getAdminServiceRequestById);
 router.patch('/marketplace/service-requests/:id/status', updateAdminServiceRequestStatus);
+
+router.get('/advertisements', listAdminAdvertisements);
+router.post(
+  '/advertisements/upload',
+  uploadSingle('media', cloudinary),
+  uploadAdminAdvertisementMedia
+);
+router.get('/advertisements/:id', getAdminAdvertisementById);
+router.post('/advertisements/:id/duplicate', duplicateAdminAdvertisement);
+router.post('/advertisements', createAdminAdvertisement);
+router.patch('/advertisements/:id', updateAdminAdvertisement);
+router.delete('/advertisements/:id', deleteAdminAdvertisement);
 
 export default router;
 
