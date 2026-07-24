@@ -69,6 +69,7 @@ export const listPublicJobs = async (req: Request, res: Response) => {
       const searchConditions: Record<string, unknown>[] = [
         { title: regex },
         { description: regex },
+        { companyName: regex },
         { province: regex },
         { district: regex },
         { category: regex },
@@ -117,18 +118,74 @@ export const listPublicJobs = async (req: Request, res: Response) => {
 
 export const listPublicUsers = async (req: Request, res: Response) => {
   try {
-    const { status } = req.query;
-    const query: Record<string, unknown> = {};
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+    const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+    const location =
+      typeof req.query.location === 'string' ? req.query.location.trim() : '';
+    const status =
+      typeof req.query.status === 'string' ? req.query.status.trim() : '';
+
+    const andConditions: Record<string, unknown>[] = [{ role: 'employee' }];
 
     if (status === 'active') {
-      query.isActive = { $ne: false };
+      andConditions.push({ isActive: { $ne: false } });
+    } else if (status === 'inactive') {
+      andConditions.push({ isActive: false });
     }
 
-    const users = await Employee.find(query)
-      .select('-password -__v')
-      .sort({ createdAt: -1 });
+    if (q) {
+      const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      andConditions.push({
+        $or: [
+          { name: { $regex: escaped, $options: 'i' } },
+          { email: { $regex: escaped, $options: 'i' } },
+          { phoneNumber: { $regex: escaped, $options: 'i' } },
+        ],
+      });
+    }
 
-    res.status(200).json({ message: 'Users retrieved successfully', users });
+    if (location && location !== 'all') {
+      const locationMap: Record<string, string> = {
+        kigali: 'Kigali',
+        southern: 'Southern',
+        northern: 'Northern',
+        eastern: 'Eastern',
+        western: 'Western',
+      };
+      const locationTerm = locationMap[location.toLowerCase()] || location;
+      const escaped = locationTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      andConditions.push({
+        $or: [
+          { province: { $regex: escaped, $options: 'i' } },
+          { location: { $regex: escaped, $options: 'i' } },
+          { district: { $regex: escaped, $options: 'i' } },
+        ],
+      });
+    }
+
+    const query = andConditions.length === 1 ? andConditions[0] : { $and: andConditions };
+
+    const [items, total] = await Promise.all([
+      Employee.find(query)
+        .select('-password -__v')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Employee.countDocuments(query),
+    ]);
+
+    res.status(200).json({
+      message: 'Users retrieved successfully',
+      items,
+      users: items,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    });
   } catch (error) {
     console.error('Error getting users:', error);
     res.status(500).json({ message: 'Server error' });

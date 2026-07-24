@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import { Types } from 'mongoose';
 import Job from '../models/Job';
 import Application from '../models/Application';
+import { parseSingleFile } from '../services/fileUploadService';
 import {
   isJobStatus,
   JobStatus,
@@ -49,6 +50,10 @@ const parseJobFields = (body: Record<string, unknown>) => {
       typeof body.employmentType === 'string' ? body.employmentType : undefined,
     salary: typeof body.salary === 'string' ? body.salary : undefined,
     category: typeof body.category === 'string' ? body.category : undefined,
+    companyName:
+      typeof body.companyName === 'string' ? body.companyName : undefined,
+    companyLogo:
+      typeof body.companyLogo === 'string' ? body.companyLogo : undefined,
     otherBenefits: parseStringArray(body.otherBenefits),
     responsibilities: parseStringArray(body.responsibilities),
     benefits: parseStringArray(body.benefits),
@@ -82,6 +87,8 @@ const formatJob = (job: InstanceType<typeof Job>) => ({
   employmentType: job.employmentType,
   salary: job.salary,
   category: job.category,
+  companyName: job.companyName,
+  companyLogo: job.companyLogo,
   otherBenefits: job.otherBenefits,
   responsibilities: job.responsibilities,
   benefits: job.benefits,
@@ -182,6 +189,8 @@ export const createAdminJob = async (req: Request, res: Response) => {
       employmentType: fields.employmentType,
       salary: fields.salary,
       category: fields.category,
+      companyName: fields.companyName,
+      companyLogo: fields.companyLogo,
       otherBenefits: fields.otherBenefits,
       responsibilities: fields.responsibilities,
       benefits: fields.benefits,
@@ -238,6 +247,8 @@ export const updateAdminJob = async (req: Request, res: Response) => {
     }
     if (fields.salary !== undefined) set.salary = fields.salary;
     if (fields.category !== undefined) set.category = fields.category;
+    if (fields.companyName !== undefined) set.companyName = fields.companyName;
+    if (fields.companyLogo !== undefined) set.companyLogo = fields.companyLogo;
     if (req.body.otherBenefits !== undefined) {
       set.otherBenefits = fields.otherBenefits;
     }
@@ -267,6 +278,25 @@ export const updateAdminJob = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error updating admin job:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const uploadAdminJobLogo = async (req: Request, res: Response) => {
+  try {
+    const file = parseSingleFile((req.body as { logo?: unknown }).logo);
+    if (!file) {
+      return res.status(400).json({ message: 'No logo file uploaded' });
+    }
+
+    res.status(200).json({
+      message: 'Logo uploaded successfully',
+      file,
+      logoUrl: file.url,
+      cloudinaryPublicId: file.public_id,
+    });
+  } catch (error) {
+    console.error('Error uploading admin job logo:', error);
+    res.status(500).json({ message: 'Server error during logo upload' });
   }
 };
 

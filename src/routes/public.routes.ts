@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import { listPublicJobs, listPublicUsers, getPublicJobById, getPublicUserById } from '../controllers/public.controller';
 import { listPublicAds } from '../controllers/public-advertisement.controller';
+import { createAdvertisementRequest } from '../controllers/advertisement-request.controller';
 
 const router = Router();
 
 router.get('/advertisements', listPublicAds);
+router.post('/advertisement-requests', createAdvertisementRequest);
 
 router.get('/jobs', listPublicJobs);
 

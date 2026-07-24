@@ -16,6 +16,8 @@ const JobSchema: Schema = new Schema(
   },
   salary: { type: String },
   category: { type: String},
+  companyName: { type: String },
+  companyLogo: { type: String },
   otherBenefits: { type: [String], default: []},
   responsibilities: { type: [String], default: []},
   benefits: { type: [String], default: [], required: true },

@@ -187,12 +187,13 @@ function mapSort(sort?: string): Record<string, 1 | -1> {
   switch (sort) {
     case 'alphabetical':
       return { displayName: 1 };
-    case 'rating':
-      return { averageRating: -1, reviewCount: -1 };
-    case 'closest':
     case 'newest':
-    default:
       return { createdAt: -1 };
+    case 'closest':
+    case 'rating':
+    default:
+      // Default / rating: higher rating first; unrated (0) fall back to newest
+      return { averageRating: -1, createdAt: -1 };
   }
 }
 
@@ -211,7 +212,7 @@ export async function searchPublicProviders(filters: {
   limit?: number;
 }) {
   const page = filters.page || 1;
-  const limit = Math.min(filters.limit || 12, 50);
+  const limit = Math.min(filters.limit || 10, 50);
   const skip = (page - 1) * limit;
 
   const scopedIds = await resolveProviderIds(filters);

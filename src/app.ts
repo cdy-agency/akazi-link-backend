@@ -16,6 +16,7 @@ import publicRoutes from './routes/public.routes';
 import uploadRoutes from './routes/upload.routes';
 import marketplaceRoutes from './routes/marketplace.routes';
 import providerRoutes from './routes/provider.routes';
+import publicFlyerRoutes from './routes/publicFlyer.route';
 import { errorHandler } from './middlewares/errorHandler';
 import { seedSuperAdmin } from './utils/seed';
 import { migrateApplicationStatuses } from './utils/migrateApplicationStatuses';
@@ -125,7 +126,7 @@ app.use('/api/housekeepers', legacyDeprecationRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/provider', providerRoutes);
-app.use('/api/flyer', legacyDeprecationRoutes);
+app.use('/api/flyer', publicFlyerRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

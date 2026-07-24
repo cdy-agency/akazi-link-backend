@@ -4,6 +4,7 @@ import {
   createCategorySchema,
   createServiceSchema,
   updateCategorySchema,
+  updateProviderRatingSchema,
   updateProviderStatusSchema,
   updateServiceSchema,
 } from '../validators/marketplace.validator';
@@ -11,12 +12,15 @@ import {
   createCategory,
   createService,
   deleteCategory,
+  deleteProvider,
   deleteService,
   getProviderAdminDetail,
+  listAdminCatalog,
   listAllCategories,
   listAllServices,
   listProvidersForAdmin,
   updateCategory,
+  updateProviderRating,
   updateProviderStatus,
   updateService,
 } from '../services/marketplace/catalog.service';
@@ -51,6 +55,24 @@ export const listAdminMarketplaceCategories = async (_req: Request, res: Respons
     const categories = await listAllCategories();
     res.status(200).json({ categories });
   } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const listAdminMarketplaceCatalog = async (req: Request, res: Response) => {
+  try {
+    const q = typeof req.query.q === 'string' ? req.query.q : undefined;
+    const statusRaw =
+      typeof req.query.status === 'string' ? req.query.status.toLowerCase() : 'all';
+    const status =
+      statusRaw === 'active' || statusRaw === 'inactive' ? statusRaw : 'all';
+    const page = parseInt(String(req.query.page || '1'), 10);
+    const limit = parseInt(String(req.query.limit || '10'), 10);
+
+    const result = await listAdminCatalog({ q, status, page, limit });
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('listAdminMarketplaceCatalog error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -184,6 +206,47 @@ export const updateAdminMarketplaceProviderStatus = async (req: Request, res: Re
       return res.status(status).json({ message: error.message });
     }
     console.error('updateAdminMarketplaceProviderStatus error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const updateAdminMarketplaceProviderRating = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const parsed = updateProviderRatingSchema.safeParse(req.body);
+    if (!parsed.success) return validationError(res, parsed.error);
+
+    const provider = await updateProviderRating(
+      req.params.id,
+      parsed.data.averageRating
+    );
+
+    res.status(200).json({
+      message: 'Service provider rating updated',
+      provider,
+    });
+  } catch (error: any) {
+    const status = error?.statusCode || 500;
+    if (status !== 500) {
+      return res.status(status).json({ message: error.message });
+    }
+    console.error('updateAdminMarketplaceProviderRating error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const deleteAdminMarketplaceProvider = async (req: Request, res: Response) => {
+  try {
+    await deleteProvider(req.params.id);
+    res.status(200).json({ message: 'Service provider deleted' });
+  } catch (error: any) {
+    const status = error?.statusCode || 500;
+    if (status !== 500) {
+      return res.status(status).json({ message: error.message });
+    }
+    console.error('deleteAdminMarketplaceProvider error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

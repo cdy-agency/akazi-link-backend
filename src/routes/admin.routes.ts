@@ -32,6 +32,8 @@ import {
 
   deleteAdminJob,
 
+  uploadAdminJobLogo,
+
 } from '../controllers/admin-jobs.controller';
 
 import {
@@ -102,15 +104,18 @@ import {
   createAdminMarketplaceCategory,
   createAdminMarketplaceService,
   deleteAdminMarketplaceCategory,
+  deleteAdminMarketplaceProvider,
   deleteAdminMarketplaceService,
   getAdminMarketplaceOverview,
   getAdminMarketplaceProviderById,
   getAdminServiceRequestById,
+  listAdminMarketplaceCatalog,
   listAdminMarketplaceCategories,
   listAdminMarketplaceProviders,
   listAdminMarketplaceServices,
   listAdminServiceRequestsHandler,
   updateAdminMarketplaceCategory,
+  updateAdminMarketplaceProviderRating,
   updateAdminMarketplaceProviderStatus,
   updateAdminMarketplaceService,
   updateAdminServiceRequestStatus,
@@ -125,6 +130,11 @@ import {
   updateAdminAdvertisement,
   uploadAdminAdvertisementMedia,
 } from '../controllers/admin-advertisement.controller';
+
+import {
+  listAdminAdvertisementRequests,
+  updateAdminAdvertisementRequestStatus,
+} from '../controllers/advertisement-request.controller';
 
 import { legacyGoneHandler } from './legacy-deprecation.routes';
 
@@ -196,6 +206,8 @@ router.get('/jobs/:jobId/applications', listAdminJobApplications);
 
 router.get('/jobs/:id/recommended-candidates', getAdminRecommendedCandidates);
 
+router.post('/jobs/upload-logo', uploadSingle('logo', cloudinary), uploadAdminJobLogo);
+
 router.get('/jobs/:id', getAdminJobById);
 
 router.post('/jobs', createAdminJob);
@@ -256,6 +268,7 @@ router.post('/offers/:id/send', sendAdminOffer);
 
 router.get('/marketplace/overview', getAdminMarketplaceOverview);
 router.get('/marketplace/categories', listAdminMarketplaceCategories);
+router.get('/marketplace/catalog', listAdminMarketplaceCatalog);
 router.post('/marketplace/categories', createAdminMarketplaceCategory);
 router.patch('/marketplace/categories/:id', updateAdminMarketplaceCategory);
 router.delete('/marketplace/categories/:id', deleteAdminMarketplaceCategory);
@@ -266,6 +279,8 @@ router.delete('/marketplace/services/:id', deleteAdminMarketplaceService);
 router.get('/marketplace/providers', listAdminMarketplaceProviders);
 router.get('/marketplace/providers/:id', getAdminMarketplaceProviderById);
 router.patch('/marketplace/providers/:id/status', updateAdminMarketplaceProviderStatus);
+router.patch('/marketplace/providers/:id/rating', updateAdminMarketplaceProviderRating);
+router.delete('/marketplace/providers/:id', deleteAdminMarketplaceProvider);
 router.get('/marketplace/service-requests', listAdminServiceRequestsHandler);
 router.get('/marketplace/service-requests/:id', getAdminServiceRequestById);
 router.patch('/marketplace/service-requests/:id/status', updateAdminServiceRequestStatus);
@@ -282,5 +297,10 @@ router.post('/advertisements', createAdminAdvertisement);
 router.patch('/advertisements/:id', updateAdminAdvertisement);
 router.delete('/advertisements/:id', deleteAdminAdvertisement);
 
-export default router;
+router.get('/advertisement-requests', listAdminAdvertisementRequests);
+router.patch(
+  '/advertisement-requests/:id/status',
+  updateAdminAdvertisementRequestStatus
+);
 
+export default router;

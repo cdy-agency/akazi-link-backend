@@ -24,7 +24,7 @@ const superadminOnly = [
 
 const authenticatedSocialRoles = [
   authenticateToken,
-  authorizeRoles(['employee', 'company', 'superadmin']),
+  authorizeRoles(['employee', 'superadmin']),
 ];
 
 const router = Router()

@@ -4,6 +4,8 @@ import ServiceProvider from '../../models/ServiceProvider';
 import ProviderCategory from '../../models/ProviderCategory';
 import ProviderService from '../../models/ProviderService';
 import ProviderDocument from '../../models/ProviderDocument';
+import ProviderNotification from '../../models/ProviderNotification';
+import ServiceRequest from '../../models/ServiceRequest';
 import { slugify } from '../../utils/slugify';
 import { emailService } from '../email/email.service';
 import { EmailTemplate } from '../email/email.types';
@@ -19,6 +21,87 @@ export async function listAllCategories() {
   return ServiceCategory.find()
     .sort({ sortOrder: 1, name: 1 })
     .lean();
+}
+
+export async function listAdminCatalog(filters: {
+  q?: string;
+  status?: 'all' | 'active' | 'inactive';
+  page?: number;
+  limit?: number;
+}) {
+  const page = Math.max(1, filters.page || 1);
+  const limit = Math.min(50, Math.max(1, filters.limit || 10));
+  const q = filters.q?.trim();
+  const status = filters.status || 'all';
+
+  const categoryQuery: Record<string, unknown> = {};
+
+  if (status === 'active') categoryQuery.isActive = { $ne: false };
+  if (status === 'inactive') categoryQuery.isActive = false;
+
+  if (q) {
+    const escape = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escape, 'i');
+
+    const matchingServiceCategoryIds = await Service.find({
+      $or: [
+        { name: regex },
+        { nameRw: regex },
+        { description: regex },
+      ],
+    })
+      .distinct('categoryId');
+
+    categoryQuery.$or = [
+      { name: regex },
+      { nameRw: regex },
+      { description: regex },
+      ...(matchingServiceCategoryIds.length
+        ? [{ _id: { $in: matchingServiceCategoryIds } }]
+        : []),
+    ];
+  }
+
+  const [categories, total] = await Promise.all([
+    ServiceCategory.find(categoryQuery)
+      .sort({ sortOrder: 1, name: 1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(),
+    ServiceCategory.countDocuments(categoryQuery),
+  ]);
+
+  const categoryIds = categories.map((c) => c._id);
+  const services = categoryIds.length
+    ? await Service.find({ categoryId: { $in: categoryIds } })
+        .sort({ sortOrder: 1, name: 1 })
+        .lean()
+    : [];
+
+  const servicesByCategory = new Map<string, typeof services>();
+  for (const service of services) {
+    const key = String(service.categoryId);
+    const list = servicesByCategory.get(key) || [];
+    list.push(service);
+    servicesByCategory.set(key, list);
+  }
+
+  const items = categories.map((category) => ({
+    ...category,
+    services: servicesByCategory.get(String(category._id)) || [],
+  }));
+
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+
+  return {
+    items,
+    total,
+    page,
+    limit,
+    totalPages,
+    hasNextPage: page < totalPages,
+    hasPrevPage: page > 1,
+  };
 }
 
 export async function listServicesByCategory(categoryId?: string) {
@@ -152,6 +235,54 @@ export async function updateProviderStatus(
   }
 
   return provider;
+}
+
+export async function updateProviderRating(
+  providerId: string,
+  averageRating: number
+) {
+  const provider = await ServiceProvider.findById(providerId);
+  if (!provider) {
+    throw Object.assign(new Error('Service provider not found'), { statusCode: 404 });
+  }
+
+  const rating = Math.round(Number(averageRating) * 2) / 2;
+  if (Number.isNaN(rating) || rating < 0 || rating > 5) {
+    throw Object.assign(new Error('Rating must be between 0 and 5'), {
+      statusCode: 400,
+    });
+  }
+
+  provider.averageRating = rating;
+  // Rated when > 0 so public cards show the score; 0 clears rating / unrated
+  provider.reviewCount = rating > 0 ? Math.max(provider.reviewCount || 0, 1) : 0;
+
+  await provider.save();
+  return provider;
+}
+
+export async function deleteProvider(providerId: string) {
+  const provider = await ServiceProvider.findById(providerId);
+  if (!provider) {
+    throw Object.assign(new Error('Service provider not found'), { statusCode: 404 });
+  }
+
+  const requestCount = await ServiceRequest.countDocuments({ providerId });
+  if (requestCount > 0) {
+    throw Object.assign(
+      new Error('Cannot delete a provider that has service requests. Suspend it instead.'),
+      { statusCode: 400 }
+    );
+  }
+
+  await Promise.all([
+    ProviderCategory.deleteMany({ providerId }),
+    ProviderService.deleteMany({ providerId }),
+    ProviderDocument.deleteMany({ providerId }),
+    ProviderNotification.deleteMany({ providerId }),
+  ]);
+
+  await provider.deleteOne();
 }
 
 export async function createCategory(input: {

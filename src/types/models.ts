@@ -186,6 +186,8 @@ export interface IJob extends Document {
   employmentType: "fulltime" | "part-time" | "internship";
   category: string;
   salary: string,
+  companyName?: string;
+  companyLogo?: string;
   otherBenefits?: string[],
   responsibilities?: string[],
   benefits?: string[];

@@ -71,6 +71,10 @@ export const updateProviderStatusSchema = z.object({
   rejectionReason: z.string().optional(),
 });
 
+export const updateProviderRatingSchema = z.object({
+  averageRating: z.coerce.number().min(0).max(5),
+});
+
 export const createCategorySchema = z.object({
   name: z.string().min(2),
   nameRw: z.string().optional(),
