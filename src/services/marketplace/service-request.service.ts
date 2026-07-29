@@ -67,16 +67,16 @@ export async function createServiceRequest(
     serviceId: string;
     customerName: string;
     customerPhone: string;
-    customerWhatsapp: string;
+    customerWhatsapp?: string;
     customerEmail?: string;
-    preferredContactMethod: string;
+    preferredContactMethod?: string;
     preferredDate?: string;
-    province: string;
-    district: string;
-    sector: string;
-    cell: string;
-    village: string;
-    address: string;
+    province?: string;
+    district?: string;
+    sector?: string;
+    cell?: string;
+    village?: string;
+    address?: string;
     description: string;
     attachments?: unknown[];
   },
@@ -103,6 +103,9 @@ export async function createServiceRequest(
     throw Object.assign(new Error('Service not found'), { statusCode: 404 });
   }
 
+  const customerWhatsapp = input.customerWhatsapp || input.customerPhone;
+  const preferredContactMethod = input.preferredContactMethod || 'PHONE';
+
   const locationLine = [
     input.village,
     input.cell,
@@ -117,18 +120,18 @@ export async function createServiceRequest(
     customerId: customerId || null,
     customerName: input.customerName,
     customerPhone: input.customerPhone,
-    customerWhatsapp: input.customerWhatsapp,
+    customerWhatsapp,
     customerEmail: input.customerEmail || undefined,
-    preferredContactMethod: input.preferredContactMethod,
+    preferredContactMethod,
     providerId: input.providerId,
     serviceId: input.serviceId,
     preferredDate: input.preferredDate ? new Date(input.preferredDate) : undefined,
-    province: input.province,
-    district: input.district,
-    sector: input.sector,
-    cell: input.cell,
-    village: input.village,
-    address: input.address,
+    province: input.province || undefined,
+    district: input.district || undefined,
+    sector: input.sector || undefined,
+    cell: input.cell || undefined,
+    village: input.village || undefined,
+    address: input.address || undefined,
     description: input.description,
     attachments: input.attachments || [],
     status: 'NEW',
@@ -144,10 +147,10 @@ export async function createServiceRequest(
   const inboxMessage = [
     `${input.customerName} requested ${service.name}.`,
     `Phone: ${input.customerPhone}`,
-    `WhatsApp: ${input.customerWhatsapp}`,
+    `WhatsApp: ${customerWhatsapp}`,
     input.customerEmail ? `Email: ${input.customerEmail}` : null,
-    `Location: ${locationLine}`,
-    `Address: ${input.address}`,
+    locationLine ? `Location: ${locationLine}` : null,
+    input.address ? `Address: ${input.address}` : null,
     `Details: ${input.description}`,
   ]
     .filter(Boolean)
@@ -162,7 +165,7 @@ export async function createServiceRequest(
       requestId: String(request._id),
       customerName: input.customerName,
       customerPhone: input.customerPhone,
-      customerWhatsapp: input.customerWhatsapp,
+      customerWhatsapp,
       customerEmail: input.customerEmail,
       serviceName: service.name,
       province: input.province,
@@ -176,7 +179,7 @@ export async function createServiceRequest(
   });
 
   await AdminNotification.create({
-    message: `New service request from ${input.customerName} for ${service.name} (${provider.displayName}) — ${locationLine}`,
+    message: `New service request from ${input.customerName} for ${service.name} (${provider.displayName})${locationLine ? ` — ${locationLine}` : ''}`,
     read: false,
     createdAt: new Date(),
   });

@@ -18,7 +18,11 @@ import {
 import { parseMultipleFiles, parseSingleFile } from '../services/fileUploadService';
 
 function validationError(res: Response, error: ZodError) {
-  const message = error.issues[0]?.message || 'Validation failed';
+  const issue = error.issues[0];
+  const path = issue?.path?.length ? issue.path.join('.') : null;
+  const message = path
+    ? `${path}: ${issue.message}`
+    : issue?.message || 'Validation failed';
   return res.status(400).json({ message });
 }
 
