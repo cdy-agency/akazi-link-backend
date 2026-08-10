@@ -21,6 +21,8 @@ export enum EmailTemplate {
   SERVICE_REQUEST_ADMIN_NEW = 'SERVICE_REQUEST_ADMIN_NEW',
   ADVERTISEMENT_REQUEST_ADMIN = 'ADVERTISEMENT_REQUEST_ADMIN',
   ADVERTISEMENT_REQUEST_SUBMITTED = 'ADVERTISEMENT_REQUEST_SUBMITTED',
+  ADVERTISEMENT_REQUEST_APPROVED = 'ADVERTISEMENT_REQUEST_APPROVED',
+  ADVERTISEMENT_REQUEST_REJECTED = 'ADVERTISEMENT_REQUEST_REJECTED',
 }
 
 /** Legacy flows preserved during platform cleanup — same HTML as pre-refactor */
@@ -336,10 +338,14 @@ export type AdvertisementRequestPlacementInfo = {
 
 export type AdvertisementRequestAdminEmailData = {
   name: string;
-  email: string;
   phone: string;
+  email?: string;
   companyName?: string;
   message: string;
+  linkUrl?: string;
+  mediaUrl?: string;
+  mediaType?: string;
+  packageType?: string;
   placements: AdvertisementRequestPlacementInfo[];
   platformName?: string;
   accentColor?: string;
@@ -348,8 +354,21 @@ export type AdvertisementRequestAdminEmailData = {
 
 export type AdvertisementRequestSubmittedEmailData = {
   name: string;
+  email?: string;
+  packageType?: string;
   placements: AdvertisementRequestPlacementInfo[];
   homeUrl?: string;
+  platformName?: string;
+  accentColor?: string;
+  logo?: string;
+};
+
+export type AdvertisementRequestStatusEmailData = {
+  name: string;
+  adminNote?: string;
+  homeUrl?: string;
+  startDate?: string;
+  endDate?: string;
   platformName?: string;
   accentColor?: string;
   logo?: string;
@@ -378,6 +397,8 @@ export type EmailTemplateDataMap = {
   [EmailTemplate.SERVICE_REQUEST_ADMIN_NEW]: ServiceRequestAdminNewEmailData;
   [EmailTemplate.ADVERTISEMENT_REQUEST_ADMIN]: AdvertisementRequestAdminEmailData;
   [EmailTemplate.ADVERTISEMENT_REQUEST_SUBMITTED]: AdvertisementRequestSubmittedEmailData;
+  [EmailTemplate.ADVERTISEMENT_REQUEST_APPROVED]: AdvertisementRequestStatusEmailData;
+  [EmailTemplate.ADVERTISEMENT_REQUEST_REJECTED]: AdvertisementRequestStatusEmailData;
 };
 
 export type LegacyEmailTemplateDataMap = {

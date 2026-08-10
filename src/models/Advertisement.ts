@@ -22,6 +22,8 @@ export interface IAdvertisement {
   status: AdvertisementStatus;
   createdBy: Types.ObjectId;
   isActive: boolean;
+  /** Displayed impressions. Each unique client view adds VIEWS_PER_IMPRESSION (50). */
+  viewCount: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -55,6 +57,7 @@ const AdvertisementSchema = new Schema<IAdvertisement>(
     },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     isActive: { type: Boolean, default: true },
+    viewCount: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true }
 );

@@ -1,8 +1,12 @@
 import { Types } from 'mongoose';
+import { createHash } from 'crypto';
 import { v2 as cloudinary } from 'cloudinary';
 import Advertisement from '../../models/Advertisement';
+import { AdvertisementViewEvent } from '../../models/AdvertisementViewEvent';
 import {
   ADVERTISEMENT_PLACEMENT_LIMITS,
+  ADVERTISEMENT_VIEW_DEDUPE_HOURS,
+  ADVERTISEMENT_VIEWS_PER_IMPRESSION,
   AdvertisementPlacement,
   computeAdvertisementStatus,
   normalizeAdvertisementPlacement,
@@ -160,26 +164,60 @@ export async function listAdvertisements(query: AdvertisementListQuery) {
   return { items, total, page, limit };
 }
 
-export async function listPublicAdvertisements(placement: AdvertisementPlacement) {
+export async function listPublicAdvertisements(
+  placement?: AdvertisementPlacement | null
+) {
   const now = new Date();
-  // Home section carousel can show many cards; other slots stay capped at 2.
-  const limit = placement === 'HOME_SECTION' ? 12 : 2;
+  // Gallery (no placement) and home section can show many; slot placements stay capped.
+  const limit =
+    !placement ? 48 : placement === 'HOME_SECTION' ? 12 : 2;
 
-  const items = await Advertisement.find({
-    placement: { $in: placementFilterValues(placement) },
+  const filter: Record<string, unknown> = {
+    status: { $ne: 'DRAFT' },
+    startDate: { $lte: now },
+    endDate: { $gte: now },
+    isActive: { $ne: false },
+  };
+
+  if (placement) {
+    filter.placement = { $in: placementFilterValues(placement) };
+  }
+
+  const items = await Advertisement.find(filter)
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .select(
+      'title description mediaType mediaUrl placement buttonText buttonLink startDate endDate status viewCount'
+    )
+    .lean();
+
+  return items.map((item) => serializeAd(item, now));
+}
+
+/** Public detail — only currently live (non-draft, in schedule) ads. */
+export async function getPublicAdvertisementById(id: string) {
+  if (!Types.ObjectId.isValid(id)) {
+    throw httpError('Advertisement not found', 404);
+  }
+
+  const now = new Date();
+  const ad = await Advertisement.findOne({
+    _id: id,
     status: { $ne: 'DRAFT' },
     startDate: { $lte: now },
     endDate: { $gte: now },
     isActive: { $ne: false },
   })
-    .sort({ createdAt: -1 })
-    .limit(limit)
     .select(
-      'title description mediaType mediaUrl placement buttonText buttonLink startDate endDate status'
+      'title description mediaType mediaUrl placement buttonText buttonLink startDate endDate status viewCount'
     )
     .lean();
 
-  return items.map((item) => serializeAd(item, now));
+  if (!ad) {
+    throw httpError('Advertisement not found', 404);
+  }
+
+  return serializeAd(ad, now);
 }
 
 export async function getAdvertisementById(id: string) {
@@ -357,6 +395,7 @@ export async function duplicateAdvertisement(
     status,
     createdBy,
     isActive: source.isActive !== false,
+    viewCount: 0,
   });
 
   return serializeAd(ad.toObject());
@@ -384,4 +423,83 @@ export async function deleteAdvertisement(id: string) {
   }
 
   return { deleted: true };
+}
+
+function hashViewerKey(raw: string) {
+  return createHash('sha256').update(raw).digest('hex');
+}
+
+/**
+ * Records one unique client impression as +50 views.
+ * Returns counted=false when the same viewer already contributed within the window.
+ */
+export async function recordAdvertisementView(
+  id: string,
+  viewerKeyRaw: string
+) {
+  if (!Types.ObjectId.isValid(id)) {
+    throw httpError('Advertisement not found', 404);
+  }
+
+  const key = String(viewerKeyRaw || '').trim();
+  if (key.length < 8 || key.length > 200) {
+    throw httpError('Invalid viewer key', 400);
+  }
+
+  const now = new Date();
+  const ad = await Advertisement.findById(id).lean();
+  if (!ad || ad.isActive === false) {
+    throw httpError('Advertisement not found', 404);
+  }
+
+  const liveStatus =
+    ad.status === 'DRAFT'
+      ? 'DRAFT'
+      : computeAdvertisementStatus(
+          new Date(ad.startDate),
+          new Date(ad.endDate),
+          now
+        );
+
+  if (liveStatus !== 'PUBLISHED') {
+    throw httpError('Advertisement is not currently published', 400);
+  }
+
+  const viewerKey = hashViewerKey(`${id}:${key}`);
+  const expiresAt = new Date(
+    now.getTime() + ADVERTISEMENT_VIEW_DEDUPE_HOURS * 60 * 60 * 1000
+  );
+
+  try {
+    await AdvertisementViewEvent.create({
+      advertisementId: ad._id,
+      viewerKey,
+      expiresAt,
+    });
+  } catch (error: unknown) {
+    const code = (error as { code?: number })?.code;
+    // Duplicate key → already counted for this viewer/ad window
+    if (code === 11000) {
+      return {
+        counted: false,
+        viewsAdded: 0,
+        viewCount: ad.viewCount ?? 0,
+      };
+    }
+    throw error;
+  }
+
+  const updated = await Advertisement.findByIdAndUpdate(
+    id,
+    { $inc: { viewCount: ADVERTISEMENT_VIEWS_PER_IMPRESSION } },
+    { new: true }
+  )
+    .select('viewCount')
+    .lean();
+
+  return {
+    counted: true,
+    viewsAdded: ADVERTISEMENT_VIEWS_PER_IMPRESSION,
+    viewCount: updated?.viewCount ?? (ad.viewCount ?? 0) + ADVERTISEMENT_VIEWS_PER_IMPRESSION,
+  };
 }

@@ -9,6 +9,8 @@ import {
   ADVERTISEMENT_REQUEST_STATUSES,
   type AdvertisementRequestStatus,
 } from '../models/AdvertisementRequest';
+import { resolveAdvertisementMediaType } from '../config/advertisement.config';
+import { parseSingleFile } from '../services/fileUploadService';
 import { ZodError } from 'zod';
 
 function validationError(res: Response, error: ZodError) {
@@ -31,6 +33,42 @@ export const createAdvertisementRequest = async (
   } catch (error) {
     console.error('createAdvertisementRequest error:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/** Public upload for free ad requests — static images only (no GIF / video). */
+export const uploadAdvertisementRequestMedia = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const file = parseSingleFile((req.body as { media?: unknown }).media);
+    if (!file) {
+      return res.status(400).json({ message: 'No image file uploaded' });
+    }
+
+    const mediaType = resolveAdvertisementMediaType({
+      mimeType: file.type,
+      format: file.format,
+      url: file.url,
+    });
+
+    if (mediaType !== 'IMAGE') {
+      return res.status(400).json({
+        message:
+          'Free ad requests accept static images only (JPG, PNG, WEBP). For GIF or video ads, contact us on WhatsApp for Premium.',
+      });
+    }
+
+    res.status(200).json({
+      message: 'Media uploaded successfully',
+      mediaType,
+      mediaUrl: file.url,
+      cloudinaryPublicId: file.public_id,
+    });
+  } catch (error) {
+    console.error('uploadAdvertisementRequestMedia error:', error);
+    res.status(500).json({ message: 'Server error during media upload' });
   }
 };
 
@@ -69,18 +107,31 @@ export const updateAdminAdvertisementRequestStatus = async (
       });
     }
 
-    const updated = await updateAdvertisementRequestStatus(
-      id,
-      status as AdvertisementRequestStatus,
-      adminNote
-    );
+    const userId =
+      (req as Request & { user?: { id?: string; _id?: string } }).user?.id ||
+      (req as Request & { user?: { _id?: string } }).user?._id;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const updated = await updateAdvertisementRequestStatus(id, {
+      status: status as AdvertisementRequestStatus,
+      adminNote,
+      startDate: req.body?.startDate,
+      endDate: req.body?.endDate,
+      placement: req.body?.placement,
+      createdBy: String(userId),
+    });
     res.status(200).json({
       message: `Request ${status.toLowerCase()}`,
       item: updated,
     });
   } catch (error: any) {
     const statusCode = error?.statusCode || 500;
-    console.error('updateAdminAdvertisementRequestStatus error:', error);
+    if (statusCode >= 500) {
+      console.error('updateAdminAdvertisementRequestStatus error:', error);
+    }
     res.status(statusCode).json({
       message: error?.message || 'Server error',
     });

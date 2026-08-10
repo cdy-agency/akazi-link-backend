@@ -29,6 +29,14 @@ export const ADVERTISEMENT_PLACEMENT_LIMITS: Partial<
   FOOTER: 2,
 };
 
+/**
+ * Client requirement: each unique viewer impression counts as 50 views.
+ * One viewer can only contribute once per ad within the dedupe window.
+ */
+export const ADVERTISEMENT_VIEWS_PER_IMPRESSION = 50;
+/** Hours before the same viewer can count another impression on the same ad. */
+export const ADVERTISEMENT_VIEW_DEDUPE_HOURS = 24;
+
 export function normalizeAdvertisementPlacement(
   value: string
 ): AdvertisementPlacement | null {

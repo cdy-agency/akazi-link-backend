@@ -36,6 +36,8 @@ import {
 } from './templates/service-request.template';
 import {
   renderAdvertisementRequestAdminEmail,
+  renderAdvertisementRequestApprovedEmail,
+  renderAdvertisementRequestRejectedEmail,
   renderAdvertisementRequestSubmittedEmail,
 } from './templates/advertisement-request.template';
 import { renderAdminCandidateRegistrationEmail } from './templates/admin-candidate-registration.template';
@@ -151,6 +153,12 @@ export function renderEmail(params: SendEmailParams): RenderedEmail {
       break;
     case EmailTemplate.ADVERTISEMENT_REQUEST_SUBMITTED:
       rendered = renderAdvertisementRequestSubmittedEmail(data as never);
+      break;
+    case EmailTemplate.ADVERTISEMENT_REQUEST_APPROVED:
+      rendered = renderAdvertisementRequestApprovedEmail(data as never);
+      break;
+    case EmailTemplate.ADVERTISEMENT_REQUEST_REJECTED:
+      rendered = renderAdvertisementRequestRejectedEmail(data as never);
       break;
     case LegacyEmailTemplate.ADMIN_CANDIDATE_REGISTRATION:
       rendered = renderAdminCandidateRegistrationEmail(data as never);
