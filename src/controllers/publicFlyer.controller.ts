@@ -4,23 +4,56 @@ import {
   parseSingleFile,
   updateSingleFileFieldOptional,
 } from "../services/fileUploadService";
-import { Document, Types } from "mongoose";
-import { IPublicFlyer } from "../types/models";
+import { Types } from "mongoose";
+
+function normalizeOptionalString(value: unknown) {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : "";
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
 
 export const PostFlyer = async (req: Request, res: Response) => {
   try {
-    const { title, description, url, from, end } = req.body;
+    const title = normalizeOptionalString(req.body.title);
+    const description = normalizeOptionalString(req.body.description) || "";
+    const url = normalizeOptionalString(req.body.url);
+    const applicationEmailRaw = normalizeOptionalString(
+      req.body.applicationEmail
+    );
+    const applicationEmail = applicationEmailRaw
+      ? applicationEmailRaw.toLowerCase()
+      : "";
+    const from = normalizeOptionalString(req.body.from) || "";
+    const end = normalizeOptionalString(req.body.end) || "";
     const image = parseSingleFile((req.body as any).image);
 
-    if (!title || !url) {
-      res.status(400).json({ message: "Please provide title and url" });
+    if (!title) {
+      res.status(400).json({ message: "Please provide a title" });
+      return;
+    }
+
+    if (!url && !applicationEmail) {
+      res.status(400).json({
+        message:
+          "Provide an application URL and/or an email for CV submissions",
+      });
+      return;
+    }
+
+    if (applicationEmail && !isValidEmail(applicationEmail)) {
+      res.status(400).json({ message: "Invalid application email" });
       return;
     }
 
     const publicFlyer = await PublicFlyerModel.create({
       title,
       description,
-      url,
+      url: url || undefined,
+      applicationEmail: applicationEmail || undefined,
       from,
       end,
       ...(image ? { image } : {}),
@@ -130,42 +163,80 @@ export const getFlyerById = async (req: Request, res: Response) => {
 export const updateFlyer = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { title, description, url, from, end } = req.body;
+    const existing = await PublicFlyerModel.findById(id);
+    if (!existing) return res.status(404).json({ message: "Flyer not found" });
 
-    // Parse optional image
+    const title = normalizeOptionalString(req.body.title);
+    const description = normalizeOptionalString(req.body.description);
+    const url =
+      req.body.url !== undefined
+        ? normalizeOptionalString(req.body.url)
+        : undefined;
+    const applicationEmailRaw =
+      req.body.applicationEmail !== undefined
+        ? normalizeOptionalString(req.body.applicationEmail)
+        : undefined;
+    const applicationEmail =
+      applicationEmailRaw === undefined
+        ? undefined
+        : applicationEmailRaw
+          ? applicationEmailRaw.toLowerCase()
+          : "";
+    const from = normalizeOptionalString(req.body.from);
+    const end = normalizeOptionalString(req.body.end);
     const image = parseSingleFile(req.body.image);
 
-    // Collect fields to update
-    const updatedData: any = {};
-    if (title) updatedData.title = title;
-    if (description) updatedData.description = description;
-    if (url) updatedData.url = url;
-    if (from) updatedData.from = from;
-    if (end) updatedData.end = end;
+    if (applicationEmail && !isValidEmail(applicationEmail)) {
+      return res.status(400).json({ message: "Invalid application email" });
+    }
 
-    // Update normal fields
-    const flyer = await PublicFlyerModel.findByIdAndUpdate(
+    const nextUrl =
+      url !== undefined ? url || undefined : existing.url || undefined;
+    const nextEmail =
+      applicationEmail !== undefined
+        ? applicationEmail || undefined
+        : existing.applicationEmail || undefined;
+
+    if (!nextUrl && !nextEmail) {
+      return res.status(400).json({
+        message:
+          "Provide an application URL and/or an email for CV submissions",
+      });
+    }
+
+    const updatedData: Record<string, unknown> = {};
+    if (title !== undefined) updatedData.title = title;
+    if (description !== undefined) updatedData.description = description;
+    if (url !== undefined) updatedData.url = url || undefined;
+    if (applicationEmail !== undefined) {
+      updatedData.applicationEmail = applicationEmail || undefined;
+    }
+    if (from !== undefined) updatedData.from = from;
+    if (end !== undefined) updatedData.end = end;
+
+    await PublicFlyerModel.findByIdAndUpdate(
       id,
       { $set: updatedData },
       { new: true, runValidators: true }
     );
 
-    if (!flyer) return res.status(404).json({ message: 'Flyer not found' });
-
-    // Update image if provided
     if (image) {
-      await updateSingleFileFieldOptional(PublicFlyerModel as any, id, 'image', image);
+      await updateSingleFileFieldOptional(
+        PublicFlyerModel as any,
+        id,
+        "image",
+        image
+      );
     }
 
-    // Return the updated flyer
     const updatedFlyer = await PublicFlyerModel.findById(id);
     res.status(200).json({
-      message: 'Flyer Updated Successfully',
+      message: "Flyer Updated Successfully",
       flyer: updatedFlyer,
     });
   } catch (error: any) {
     console.error(error);
-    res.status(500).json({ message: error.message || 'Failed to update Flyer' });
+    res.status(500).json({ message: error.message || "Failed to update Flyer" });
   }
 };
 

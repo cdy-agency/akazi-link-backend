@@ -31,6 +31,7 @@ const PublicSchema = new Schema<IPublicFlyer>({
   description: { type: String },
   image: { type: FileInfoSchema },
   url: { type: String },
+  applicationEmail: { type: String, trim: true, lowercase: true },
   from: { type: String },
   end: { type: String },
   likes: [{ type: Schema.Types.ObjectId, ref: "User" }],

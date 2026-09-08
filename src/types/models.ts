@@ -351,7 +351,9 @@ export interface IPublicFlyer {
   title: string;
   description: string;
   image: IFileInfo;
-  url: string;
+  url?: string;
+  /** Email to receive CV / cover letter when there is no apply link. */
+  applicationEmail?: string;
   from: string;
   end: string;
   likes: string[];
