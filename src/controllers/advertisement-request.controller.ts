@@ -12,6 +12,11 @@ import {
 import { resolveAdvertisementMediaType } from '../config/advertisement.config';
 import { parseSingleFile } from '../services/fileUploadService';
 import { ZodError } from 'zod';
+import {
+  UPLOAD_LIMITS,
+  assertUploadedFileSize,
+  respondUploadError,
+} from '../utils/upload-limits';
 
 function validationError(res: Response, error: ZodError) {
   const message = error.issues[0]?.message || 'Validation failed';
@@ -47,6 +52,8 @@ export const uploadAdvertisementRequestMedia = async (
       return res.status(400).json({ message: 'No image file uploaded' });
     }
 
+    assertUploadedFileSize(file, UPLOAD_LIMITS.image, 'Image');
+
     const mediaType = resolveAdvertisementMediaType({
       mimeType: file.type,
       format: file.format,
@@ -67,8 +74,7 @@ export const uploadAdvertisementRequestMedia = async (
       cloudinaryPublicId: file.public_id,
     });
   } catch (error) {
-    console.error('uploadAdvertisementRequestMedia error:', error);
-    res.status(500).json({ message: 'Server error during media upload' });
+    return respondUploadError(res, error, 'Server error during media upload');
   }
 };
 

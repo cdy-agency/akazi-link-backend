@@ -9,6 +9,11 @@ import {
   JobStatus,
   syncJobActiveFlag,
 } from '../config/job.config';
+import {
+  UPLOAD_LIMITS,
+  assertUploadedFileSize,
+  respondUploadError,
+} from '../utils/upload-limits';
 
 const parseStringArray = (value: unknown): string[] => {
   if (Array.isArray(value)) {
@@ -288,6 +293,8 @@ export const uploadAdminJobLogo = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'No logo file uploaded' });
     }
 
+    assertUploadedFileSize(file, UPLOAD_LIMITS.logo, 'Logo');
+
     res.status(200).json({
       message: 'Logo uploaded successfully',
       file,
@@ -295,8 +302,7 @@ export const uploadAdminJobLogo = async (req: Request, res: Response) => {
       cloudinaryPublicId: file.public_id,
     });
   } catch (error) {
-    console.error('Error uploading admin job logo:', error);
-    res.status(500).json({ message: 'Server error during logo upload' });
+    return respondUploadError(res, error, 'Server error during logo upload');
   }
 };
 

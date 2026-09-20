@@ -16,12 +16,14 @@ import {
 } from '../config/cv.config';
 import { scheduleCvProcessing } from '../services/cv-processing.service';
 import { getCvExtractionSummary } from '../services/cv-extraction.service';
+import { oversizedUploadMessage } from '../utils/upload-limits';
 
 const validateCvFile = (file: IFileInfo): string => {
   if (!file.size || file.size > CV_MAX_BYTES) {
-    throw Object.assign(new Error('CV file must be 10 MB or smaller'), {
-      statusCode: 400,
-    });
+    throw Object.assign(
+      new Error(oversizedUploadMessage(file.size || 0, CV_MAX_BYTES, 'CV')),
+      { statusCode: 400 }
+    );
   }
 
   const extension = resolveCvExtension(file);

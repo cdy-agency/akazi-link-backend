@@ -1,5 +1,11 @@
 import { Request, Response } from 'express';
 import { parseSingleFile, parseMultipleFiles } from '../services/fileUploadService';
+import {
+  UPLOAD_LIMITS,
+  assertUploadedFileSize,
+  assertUploadedFilesSize,
+  respondUploadError,
+} from '../utils/upload-limits';
 
 // Upload single file
 export const uploadFile = async (req: Request, res: Response) => {
@@ -10,13 +16,14 @@ export const uploadFile = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
+    assertUploadedFileSize(file, UPLOAD_LIMITS.image, 'File');
+
     res.status(200).json({
       message: 'File uploaded successfully',
       file
     });
   } catch (error) {
-    console.error('Error uploading file:', error);
-    res.status(500).json({ message: 'Server error during file upload' });
+    return respondUploadError(res, error, 'Server error during file upload');
   }
 };
 
@@ -29,13 +36,14 @@ export const uploadMultipleFiles = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'No files uploaded' });
     }
 
+    assertUploadedFilesSize(files, UPLOAD_LIMITS.document, 'File');
+
     res.status(200).json({
       message: 'Files uploaded successfully',
       files
     });
   } catch (error) {
-    console.error('Error uploading files:', error);
-    res.status(500).json({ message: 'Server error during files upload' });
+    return respondUploadError(res, error, 'Server error during files upload');
   }
 };
 
@@ -48,13 +56,14 @@ export const uploadProfileImage = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'No profile image uploaded' });
     }
 
+    assertUploadedFileSize(profileImage, UPLOAD_LIMITS.logo, 'Profile image');
+
     res.status(200).json({
       message: 'Profile image uploaded successfully',
       profileImage
     });
   } catch (error) {
-    console.error('Error uploading profile image:', error);
-    res.status(500).json({ message: 'Server error during profile image upload' });
+    return respondUploadError(res, error, 'Server error during profile image upload');
   }
 };
 
@@ -67,13 +76,14 @@ export const uploadPassportImage = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'No passport image uploaded' });
     }
 
+    assertUploadedFileSize(passportImage, UPLOAD_LIMITS.image, 'Passport image');
+
     res.status(200).json({
       message: 'Passport image uploaded successfully',
       passportImage
     });
   } catch (error) {
-    console.error('Error uploading passport image:', error);
-    res.status(500).json({ message: 'Server error during passport image upload' });
+    return respondUploadError(res, error, 'Server error during passport image upload');
   }
 };
 
@@ -86,13 +96,13 @@ export const uploadFullBodyImage = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'No full body image uploaded' });
     }
 
+    assertUploadedFileSize(fullBodyImage, UPLOAD_LIMITS.image, 'Full body image');
+
     res.status(200).json({
       message: 'Full body image uploaded successfully',
       fullBodyImage
     });
   } catch (error) {
-    console.error('Error uploading full body image:', error);
-    res.status(500).json({ message: 'Server error during full body image upload' });
+    return respondUploadError(res, error, 'Server error during full body image upload');
   }
 };
-

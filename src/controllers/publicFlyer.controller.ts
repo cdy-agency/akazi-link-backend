@@ -5,6 +5,11 @@ import {
   updateSingleFileFieldOptional,
 } from "../services/fileUploadService";
 import { Types } from "mongoose";
+import {
+  UPLOAD_LIMITS,
+  assertUploadedFileSize,
+  respondUploadError,
+} from "../utils/upload-limits";
 
 function normalizeOptionalString(value: unknown) {
   if (typeof value !== "string") return undefined;
@@ -30,6 +35,9 @@ export const PostFlyer = async (req: Request, res: Response) => {
     const from = normalizeOptionalString(req.body.from) || "";
     const end = normalizeOptionalString(req.body.end) || "";
     const image = parseSingleFile((req.body as any).image);
+    if (image) {
+      assertUploadedFileSize(image, UPLOAD_LIMITS.image, "Flyer image");
+    }
 
     if (!title) {
       res.status(400).json({ message: "Please provide a title" });
@@ -64,7 +72,7 @@ export const PostFlyer = async (req: Request, res: Response) => {
       publicFlyer: publicFlyer.toJSON(),
     });
   } catch (error: any) {
-    res.status(500).json({ message: "Failed to create Public Flyer" });
+    return respondUploadError(res, error, "Failed to create Public Flyer");
   }
 };
 
@@ -185,6 +193,9 @@ export const updateFlyer = async (req: Request, res: Response) => {
     const from = normalizeOptionalString(req.body.from);
     const end = normalizeOptionalString(req.body.end);
     const image = parseSingleFile(req.body.image);
+    if (image) {
+      assertUploadedFileSize(image, UPLOAD_LIMITS.image, "Flyer image");
+    }
 
     if (applicationEmail && !isValidEmail(applicationEmail)) {
       return res.status(400).json({ message: "Invalid application email" });
@@ -235,8 +246,7 @@ export const updateFlyer = async (req: Request, res: Response) => {
       flyer: updatedFlyer,
     });
   } catch (error: any) {
-    console.error(error);
-    res.status(500).json({ message: error.message || "Failed to update Flyer" });
+    return respondUploadError(res, error, "Failed to update Flyer");
   }
 };
 

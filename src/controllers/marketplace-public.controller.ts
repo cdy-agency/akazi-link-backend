@@ -16,6 +16,12 @@ import {
   providerSearchQuerySchema,
 } from '../validators/marketplace.validator';
 import { parseMultipleFiles, parseSingleFile } from '../services/fileUploadService';
+import {
+  UPLOAD_LIMITS,
+  assertUploadedFileSize,
+  assertUploadedFilesSize,
+  respondUploadError,
+} from '../utils/upload-limits';
 
 function validationError(res: Response, error: ZodError) {
   const issue = error.issues[0];
@@ -149,10 +155,10 @@ export const uploadMarketplaceLogo = async (req: Request, res: Response) => {
     if (!logo) {
       return res.status(400).json({ message: 'Logo is required' });
     }
+    assertUploadedFileSize(logo, UPLOAD_LIMITS.logo, 'Logo');
     res.status(200).json({ logo });
   } catch (error) {
-    console.error('uploadMarketplaceLogo error:', error);
-    res.status(500).json({ message: 'Server error during logo upload' });
+    return respondUploadError(res, error, 'Server error during logo upload');
   }
 };
 
@@ -162,10 +168,10 @@ export const uploadMarketplaceDocuments = async (req: Request, res: Response) =>
     if (!files.length) {
       return res.status(400).json({ message: 'No documents uploaded' });
     }
+    assertUploadedFilesSize(files, UPLOAD_LIMITS.document, 'Document');
     res.status(200).json({ files });
   } catch (error) {
-    console.error('uploadMarketplaceDocuments error:', error);
-    res.status(500).json({ message: 'Server error during documents upload' });
+    return respondUploadError(res, error, 'Server error during documents upload');
   }
 };
 
@@ -175,9 +181,9 @@ export const uploadMarketplaceRequestAttachments = async (req: Request, res: Res
     if (!files.length) {
       return res.status(400).json({ message: 'No attachments uploaded' });
     }
+    assertUploadedFilesSize(files, UPLOAD_LIMITS.document, 'Attachment');
     res.status(200).json({ files });
   } catch (error) {
-    console.error('uploadMarketplaceRequestAttachments error:', error);
-    res.status(500).json({ message: 'Server error during attachment upload' });
+    return respondUploadError(res, error, 'Server error during attachment upload');
   }
 };

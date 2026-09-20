@@ -5,6 +5,11 @@ import {
   resolveAdvertisementMediaType,
 } from '../config/advertisement.config';
 import {
+  UPLOAD_LIMITS,
+  assertUploadedFileSize,
+  respondUploadError,
+} from '../utils/upload-limits';
+import {
   advertisementListQuerySchema,
   createAdvertisementSchema,
   duplicateAdvertisementSchema,
@@ -129,6 +134,8 @@ export const uploadAdminAdvertisementMedia = async (
       return res.status(400).json({ message: 'No media file uploaded' });
     }
 
+    assertUploadedFileSize(file, UPLOAD_LIMITS.adMedia, 'Media');
+
     const mediaType = resolveAdvertisementMediaType({
       mimeType: file.type,
       format: file.format,
@@ -149,7 +156,6 @@ export const uploadAdminAdvertisementMedia = async (
       cloudinaryPublicId: file.public_id,
     });
   } catch (error) {
-    console.error('uploadAdminAdvertisementMedia error:', error);
-    res.status(500).json({ message: 'Server error during media upload' });
+    return respondUploadError(res, error, 'Server error during media upload');
   }
 };
