@@ -91,7 +91,13 @@ export const registerCandidate = async (
 
   try {
     const existingUser = await User.findOne({ email: normalizedEmail });
-    if (existingUser) {
+    const canResumePending =
+      existingUser &&
+      !existingUser.emailVerified &&
+      existingUser.provider === 'EMAIL' &&
+      existingUser.role === 'employee';
+
+    if (existingUser && !canResumePending) {
       return sendAuthError(
         res,
         409,
@@ -102,56 +108,76 @@ export const registerCandidate = async (
 
     const hashedPassword = await hashPassword(password);
 
-    const employee = await Employee.create({
-      name: fullName,
-      email: normalizedEmail,
-      password: hashedPassword,
-      role: 'employee',
-      provider: 'EMAIL',
-      emailVerified: false,
-      emailVerifiedAt: null,
-    });
-
-    const { plainCode } = await issueOtp(normalizedEmail);
-
-    try {
-      await sendVerificationOtpEmail(normalizedEmail, plainCode);
-    } catch (emailError) {
-      console.error('Failed to send verification OTP email:', emailError);
-      return sendAuthError(
-        res,
-        500,
-        'REGISTRATION_FAILED',
-        'Registration could not be completed. Please try again.'
+    let employeeId: string;
+    if (canResumePending) {
+      // A previous attempt created the account but the client never saw the
+      // response (e.g. timeout). Let the user continue instead of locking them out.
+      await Employee.updateOne(
+        { _id: existingUser._id },
+        { $set: { name: fullName, password: hashedPassword } }
       );
-    }
-
-    try {
-      await emailService.send({
-        to: process.env.SMTP_USER || '',
-        template: LegacyEmailTemplate.ADMIN_CANDIDATE_REGISTRATION,
-        data: {
-          employeeName: fullName,
-          email: normalizedEmail,
-        },
+      employeeId = String(existingUser._id);
+    } else {
+      const employee = await Employee.create({
+        name: fullName,
+        email: normalizedEmail,
+        password: hashedPassword,
+        role: 'employee',
+        provider: 'EMAIL',
+        emailVerified: false,
+        emailVerifiedAt: null,
       });
-    } catch (adminEmailError) {
-      console.error(
-        'Failed to notify admin about candidate registration:',
-        adminEmailError
+      employeeId = String(employee._id);
+    }
+
+    let plainCode: string | null = null;
+    try {
+      ({ plainCode } = await issueOtp(normalizedEmail));
+    } catch (otpError) {
+      // Rate-limited resumes already have recent codes in the inbox.
+      if (
+        !(canResumePending && otpError instanceof CandidateAuthError &&
+          otpError.code === 'OTP_RATE_LIMITED')
+      ) {
+        throw otpError;
+      }
+    }
+
+    // SMTP can take several seconds; never hold the HTTP response for it.
+    // Users can request a new code from the verify page if delivery fails.
+    if (plainCode) {
+      void sendVerificationOtpEmail(normalizedEmail, plainCode).catch(
+        (emailError) =>
+          console.error('Failed to send verification OTP email:', emailError)
       );
     }
 
-    try {
-      await AdminNotification.create({
+    if (!canResumePending) {
+      void emailService
+        .send({
+          to: process.env.SMTP_USER || '',
+          template: LegacyEmailTemplate.ADMIN_CANDIDATE_REGISTRATION,
+          data: {
+            employeeName: fullName,
+            email: normalizedEmail,
+          },
+        })
+        .catch((adminEmailError) =>
+          console.error(
+            'Failed to notify admin about candidate registration:',
+            adminEmailError
+          )
+        );
+
+      void AdminNotification.create({
         message: `New candidate registered: ${fullName} (${normalizedEmail})`,
         read: false,
         createdAt: new Date(),
-      });
-    } catch (notificationError) {
-      console.error(
-        'Failed to create admin notification for candidate registration:',
-        notificationError
+      }).catch((notificationError) =>
+        console.error(
+          'Failed to create admin notification for candidate registration:',
+          notificationError
+        )
       );
     }
 
@@ -159,11 +185,15 @@ export const registerCandidate = async (
       message: 'Registration successful. Please verify your email.',
       requiresVerification: true,
       email: normalizedEmail,
-      userId: String(employee._id),
+      userId: employeeId,
     };
 
     return res.status(201).json(response);
   } catch (error) {
+    if (error instanceof CandidateAuthError) {
+      return sendAuthError(res, error.statusCode, error.code, error.message);
+    }
+
     if (isDuplicateKeyError(error as object)) {
       return sendAuthError(
         res,
@@ -207,17 +237,10 @@ export const sendOtp = async (
 
     const { plainCode } = await issueOtp(normalizedEmail);
 
-    try {
-      await sendVerificationOtpEmail(normalizedEmail, plainCode);
-    } catch (emailError) {
-      console.error('Failed to resend verification OTP email:', emailError);
-      return sendAuthError(
-        res,
-        500,
-        'REGISTRATION_FAILED',
-        'Could not send verification code. Please try again later.'
-      );
-    }
+    void sendVerificationOtpEmail(normalizedEmail, plainCode).catch(
+      (emailError) =>
+        console.error('Failed to resend verification OTP email:', emailError)
+    );
 
     return res.status(200).json(genericResponse);
   } catch (error) {

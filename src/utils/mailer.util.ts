@@ -35,6 +35,13 @@ export class MailerUtil {
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT ?? 587),
     secure: Boolean(process.env.SMTP_SECURE === 'true'),
+    // Reuse SMTP connections instead of a fresh TLS handshake per email,
+    // and fail fast rather than hanging when the mail server is slow.
+    pool: true,
+    maxConnections: 3,
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 20_000,
     auth:
       process.env.SMTP_USER && process.env.SMTP_PASS
         ? {
